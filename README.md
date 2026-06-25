@@ -3,6 +3,10 @@
 把檔案丟到 MacBook 瀏海（notch）下方暫存的小工具，需要時再拖出來。
 原生 Swift / AppKit，常駐在選單列，不佔 Dock。
 
+<p align="center">
+  <img src="docs/demo.gif" width="720" alt="NotchShelf demo">
+</p>
+
 ## 功能
 
 - **拖入暫存**：把檔案拖到瀏海下方，面板會展開，放開即暫存。
