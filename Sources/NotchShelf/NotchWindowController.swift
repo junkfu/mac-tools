@@ -107,22 +107,25 @@ final class NotchWindowController {
         guard rootView.isExpanded else { return }
         rootView.isExpanded = false
         let screen = targetScreen
-        animate(to: collapsedFrame(on: screen))
+        animate(to: collapsedFrame(on: screen), duration: 0.3)
     }
 
     func toggleExpand() {
         if rootView.isExpanded { collapse() } else { expand() }
     }
 
-    private func animate(to frame: NSRect) {
+    private func animate(to frame: NSRect, duration: TimeInterval = 0.18) {
         rootView.updateVisibility()
+        rootView.setAnimating(true)
         NSAnimationContext.runAnimationGroup({ ctx in
-            ctx.duration = 0.18
+            ctx.duration = duration
             ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
             panel.animator().setFrame(frame, display: true)
         }, completionHandler: { [weak self] in
-            self?.rootView.needsLayout = true
-            self?.rootView.layoutSubtreeIfNeeded()
+            guard let self else { return }
+            self.rootView.needsLayout = true
+            self.rootView.layoutSubtreeIfNeeded()
+            self.rootView.setAnimating(false)
         })
     }
 }

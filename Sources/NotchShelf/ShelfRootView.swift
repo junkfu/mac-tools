@@ -20,6 +20,7 @@ final class ShelfRootView: NSView {
     private var collapseWork: DispatchWorkItem?
     private var isDragInside = false
     private var isHovering = false
+    private var isAnimating = false
 
     init(store: ShelfStore) {
         self.store = store
@@ -143,22 +144,45 @@ final class ShelfRootView: NSView {
 
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
-        if let t = trackingArea { removeTrackingArea(t) }
-        let t = NSTrackingArea(rect: bounds,
+        // Build once. With .inVisibleRect the area auto-syncs to the view's
+        // bounds, so we must NOT remove/re-add it on every bounds change —
+        // doing so during the expand/collapse animation fires a storm of
+        // spurious enter/exit events (the flicker).
+        guard trackingArea == nil else { return }
+        let t = NSTrackingArea(rect: .zero,
                                options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
                                owner: self, userInfo: nil)
         addTrackingArea(t)
         trackingArea = t
     }
 
+    /// Called by the controller around the expand/collapse animation. While
+    /// animating we ignore enter/exit (the moving boundary sweeps the cursor);
+    /// when it finishes we reconcile against the cursor's real position.
+    func setAnimating(_ animating: Bool) {
+        isAnimating = animating
+        if !animating { reconcileHoverState() }
+    }
+
+    private func reconcileHoverState() {
+        if cursorIsInsidePanel() {
+            if !isExpanded { controller?.expand() }
+        } else if isExpanded, !isDragInside, !(controller?.isDraggingOut ?? false) {
+            controller?.collapse()
+        }
+    }
+
     override func mouseEntered(with event: NSEvent) {
         isHovering = true
+        guard !isAnimating else { return }
         cancelCollapse()
         controller?.expand()
     }
 
     override func mouseExited(with event: NSEvent) {
         isHovering = false
+        guard !isAnimating else { return }
+        // 極短防抖後收合；收合前會再確認游標真的離開（避免最頂端邊界誤收）
         scheduleCollapse()
     }
 
@@ -205,19 +229,30 @@ final class ShelfRootView: NSView {
         scheduleCollapse()
     }
 
-    private func scheduleCollapse() {
+    private func scheduleCollapse(after delay: TimeInterval = 0.12) {
         cancelCollapse()
         let work = DispatchWorkItem { [weak self] in
             guard let self else { return }
-            if self.isDragInside || self.isHovering || (self.controller?.isDraggingOut ?? false) { return }
+            if self.isDragInside || (self.controller?.isDraggingOut ?? false) { return }
+            // Re-check the cursor's real position: a spurious exit at the very
+            // top screen edge (window top == screen top) must not collapse.
+            if self.cursorIsInsidePanel() { return }
             self.controller?.collapse()
         }
         collapseWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
 
     private func cancelCollapse() {
         collapseWork?.cancel()
         collapseWork = nil
+    }
+
+    /// Whether the cursor is over the panel, with a few px of tolerance so the
+    /// top screen edge and boundary jitter count as "inside".
+    private func cursorIsInsidePanel() -> Bool {
+        guard let window = window else { return false }
+        let f = window.frame.insetBy(dx: -3, dy: -3)
+        return NSMouseInRect(NSEvent.mouseLocation, f, false)
     }
 }
