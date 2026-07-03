@@ -1,0 +1,11 @@
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Built app bundle / installer image (produced by build.sh / make-dmg.sh)
+MacCut.app/
+MacCut.dmg
+
+# macOS
+.DS_Store

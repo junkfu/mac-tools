@@ -12,11 +12,14 @@ MacCut is a lightweight macOS menu bar screenshot-annotation tool (native Swift/
 ./setup-signing.sh   # one-time per machine: creates a self-signed "MacCut Local Signing" identity in the login keychain
 ./build.sh           # swift build -c release → assemble MacCut.app → codesign
 open MacCut.app
+./make-dmg.sh        # optional: package MacCut.app + an /Applications symlink into MacCut.dmg for install
 ```
 
 - `swift build` alone compiles but does not produce a runnable `.app`; the app needs the bundle (Info.plist with `LSUIElement`) to behave correctly, so use `./build.sh` for real testing.
 - There are no tests and no linter configured.
 - Signing matters: without the local identity, `build.sh` falls back to ad-hoc signing, and every rebuild changes the code signature — macOS then re-prompts for the Screen Recording permission (required because the app invokes `screencapture`). If a rebuilt app silently fails to capture, stale Screen Recording authorization is the first suspect: remove the old entry in System Settings → Privacy & Security → Screen Recording and re-authorize.
+- Detecting the local identity: use `security find-certificate -c "MacCut Local Signing"`, not `security find-identity -v`. The latter only lists identities that pass trust-chain validation, so it reports "0 valid identities" for this self-signed cert even though `codesign --sign "MacCut Local Signing"` works fine. Both `build.sh` and `setup-signing.sh` rely on `find-certificate` for this reason — don't "simplify" it back to `find-identity`.
+- The app can also be installed to `/Applications` (via `make-dmg.sh` + drag-install, or by copying the built `.app` with `ditto`); the code signature identity carries over unchanged, so it doesn't require re-authorizing Screen Recording on its own — moving the on-disk path might still prompt once, but the identity itself stays stable across rebuilds either way.
 
 ## Architecture
 

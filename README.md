@@ -32,6 +32,29 @@ open MacCut.app
 
 啟動後沒有視窗也沒有 Dock 圖示，選單列會出現 ✂️ 圖示。
 
+### 打包成 DMG、安裝到 Applications
+
+```bash
+./make-dmg.sh
+```
+
+會產生 `MacCut.dmg`（裡面是 `MacCut.app` + 一個指向 `/Applications` 的捷徑，跟一般 Mac App 安裝方式一樣）。
+沒有先跑過 `build.sh` 的話，`make-dmg.sh` 會自動先幫你編譯。
+
+打開 `MacCut.dmg` 後把 `MacCut.app` 拖進 `Applications` 捷徑就裝好了，之後從「應用程式」資料夾或 Spotlight
+啟動即可，不用再從專案資料夾跑。要在終端機一次做完「掛載 DMG → 複製到 Applications → 打開」也可以：
+
+```bash
+hdiutil attach MacCut.dmg -nobrowse -quiet
+rm -rf /Applications/MacCut.app
+ditto /Volumes/MacCut/MacCut.app /Applications/MacCut.app
+hdiutil detach /Volumes/MacCut -quiet
+open /Applications/MacCut.app
+```
+
+> 這個 DMG 是自簽章、沒有經過 Apple 公證，只適合你自己本機安裝，或給知道怎麼繞過 Gatekeeper 的人。
+> 如果之後想給不懂技術的朋友直接下載安裝，需要 Apple Developer ID 簽章 + 公證，是完全不同的流程。
+
 ### 第一次使用：授權「螢幕錄製」權限
 
 因為是呼叫系統的 `screencapture` 來框選，第一次按快捷鍵時 macOS 會跳出「螢幕錄製」授權請求，
@@ -63,7 +86,8 @@ open MacCut.app
 
 ### 開機自動啟動（選擇性）
 
-系統設定 →「一般」→「登入項目」→ 加入 `MacCut.app`。
+先照上面「打包成 DMG、安裝到 Applications」裝到 `/Applications/MacCut.app`，
+再到系統設定 →「一般」→「登入項目」→ 加入它。
 
 ## 使用方式
 
@@ -80,6 +104,9 @@ open MacCut.app
 ## 開發
 
 ```
+build.sh            release 編譯 + 組 .app + 簽章
+setup-signing.sh     一次性：建立本機固定簽章身分
+make-dmg.sh          把 .app 包成可安裝的 .dmg
 Sources/MacCut/
   main.swift                      進入點
   AppDelegate.swift                選單列圖示、快捷鍵註冊、串起截圖→標註流程
