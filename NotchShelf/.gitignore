@@ -1,0 +1,10 @@
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Built app bundle (produced by build.sh)
+NotchShelf.app/
+
+# macOS
+.DS_Store
