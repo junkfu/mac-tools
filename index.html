@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>選單列裡的兩個小工具 — NotchShelf & MacCut</title>
+<meta name="description" content="NotchShelf 與 MacCut：兩個原生 Swift / AppKit 打造的 macOS 選單列小工具，分別解決檔案暫存與截圖標註。">
+<style>
+  :root{
+    --bg:#0b0d13;
+    --surface:#14161f;
+    --surface-2:#1b1e29;
+    --line:#262935;
+    --line-soft:#1d202b;
+    --ink:#ecedf3;
+    --ink-dim:#8b8fa3;
+    --ink-faint:#565a6c;
+    --accent-notch:#8b93ff;
+    --accent-notch-dim:rgba(139,147,255,.16);
+    --accent-cut:#ff6a5c;
+    --accent-cut-dim:rgba(255,106,92,.16);
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{background:var(--bg);}
+  body{
+    margin:0;
+    color:var(--ink);
+    font-family:var(--sans);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;}
+  ::selection{background:var(--accent-notch-dim);}
+
+  .page{max-width:920px;margin:0 auto;padding:0 24px 96px;}
+
+  /* ---------- fake menu bar ---------- */
+  .menubar{
+    position:sticky;top:0;z-index:20;
+    display:flex;align-items:center;justify-content:space-between;
+    height:34px;padding:0 18px;margin-bottom:clamp(48px,8vw,96px);
+    background:rgba(17,19,27,.78);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--line-soft);
+    font-size:13px;color:var(--ink-dim);
+    white-space:nowrap;overflow:hidden;
+  }
+  .menubar-left{display:flex;gap:16px;align-items:center;overflow:hidden;}
+  .menubar-left b{color:var(--ink);font-weight:600;}
+  .menubar-left span{opacity:.7;}
+  .menubar-right{display:flex;gap:14px;align-items:center;font-variant-numeric:tabular-nums;}
+  .menubar-right .icon{font-size:13px;filter:grayscale(.15);}
+  @media (max-width:560px){ .menubar-left span{display:none;} }
+
+  /* ---------- hero ---------- */
+  .hero{padding-top:8px;text-align:center;}
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--ink-faint);margin:0 0 18px;
+  }
+  h1{
+    font-family:var(--mono);
+    font-size:clamp(28px,4.6vw,44px);
+    font-weight:600;letter-spacing:-.01em;
+    margin:0 0 18px;text-wrap:balance;
+  }
+  .hero p.lede{
+    max-width:52ch;margin:0 auto 44px;
+    color:var(--ink-dim);font-size:16px;text-wrap:balance;
+  }
+
+  /* device / notch demo */
+  .device{
+    position:relative;margin:0 auto 40px;
+    width:min(560px,100%);
+    height:150px;
+    background:var(--surface-2);
+    border-radius:20px;
+    border:1px solid var(--line);
+  }
+  .notch{
+    position:absolute;top:0;left:50%;transform:translateX(-50%);
+    width:132px;height:26px;
+    background:var(--bg);
+    border-radius:0 0 14px 14px;
+  }
+  .notch::after{
+    content:"";position:absolute;inset:0;margin:auto;
+    width:6px;height:6px;border-radius:50%;
+    background:#1c2030;
+    top:6px;right:14px;left:auto;
+  }
+  .drop-file{
+    position:absolute;top:36px;left:50%;
+    width:34px;height:40px;margin-left:-17px;
+    border-radius:5px;
+    background:linear-gradient(160deg,#3a4160,#262c42);
+    border:1px solid #454d70;
+    animation:dropIn 3.6s cubic-bezier(.5,0,.2,1) infinite;
+  }
+  .drop-file::before{
+    content:"PNG";
+    position:absolute;inset:0;display:grid;place-items:center;
+    font-family:var(--mono);font-size:8px;letter-spacing:.03em;color:#c7cbe6;
+  }
+  @keyframes dropIn{
+    0%{opacity:0;transform:translateY(-14px) scale(.92);}
+    16%{opacity:1;transform:translateY(0) scale(1);}
+    38%{opacity:1;transform:translateY(14px) scale(1);}
+    46%{opacity:0;transform:translateY(20px) scale(.85);}
+    100%{opacity:0;}
+  }
+  .shelf-row{
+    position:absolute;left:0;right:0;bottom:26px;
+    display:flex;justify-content:center;gap:10px;
+  }
+  .chip{
+    display:flex;align-items:center;gap:6px;
+    padding:6px 10px 6px 8px;border-radius:9px;
+    background:var(--surface);border:1px solid var(--line);
+    font-family:var(--mono);font-size:11px;color:var(--ink-dim);
+    opacity:0;animation:chipIn 3.6s ease infinite;
+  }
+  .chip .dot{width:7px;height:7px;border-radius:2px;flex:none;}
+  .chip:nth-child(1){animation-delay:.1s;}
+  .chip:nth-child(2){animation-delay:.35s;}
+  .chip:nth-child(3){animation-delay:.6s;}
+  @keyframes chipIn{
+    0%,40%{opacity:0;transform:translateY(4px);}
+    52%,88%{opacity:1;transform:translateY(0);}
+    100%{opacity:1;transform:translateY(0);}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .drop-file{animation:none;opacity:0;}
+    .chip{animation:none;opacity:1;}
+  }
+
+  .nav-pills{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+  .pill{
+    font-family:var(--mono);font-size:13px;
+    padding:9px 18px;border-radius:999px;
+    border:1px solid var(--line);color:var(--ink);
+    text-decoration:none;transition:border-color .15s,background .15s;
+  }
+  .pill:hover{background:var(--surface);}
+  .pill:focus-visible{outline:2px solid var(--accent-notch);outline-offset:2px;}
+  .pill.cut:hover{border-color:var(--accent-cut);}
+  .pill.notch:hover{border-color:var(--accent-notch);}
+
+  /* ---------- tool sections ---------- */
+  .tool{margin-top:clamp(72px,12vw,120px);}
+  .tool-head{margin-bottom:32px;display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap;}
+  .tool-head .eyebrow{margin-bottom:10px;}
+  .tool-notch .eyebrow{color:var(--accent-notch);}
+  .tool-cut .eyebrow{color:var(--accent-cut);}
+  .tool h2{
+    font-family:var(--mono);font-size:clamp(22px,3.4vw,30px);
+    font-weight:600;margin:0 0 12px;letter-spacing:-.01em;
+  }
+  .tool .lede{color:var(--ink-dim);max-width:56ch;margin:0;font-size:15.5px;}
+  .source-link{
+    flex:none;font-family:var(--mono);font-size:12.5px;
+    padding:8px 14px;border-radius:8px;border:1px solid var(--line);
+    text-decoration:none;color:var(--ink-dim);white-space:nowrap;
+    transition:border-color .15s,color .15s;
+  }
+  .source-link:hover{color:var(--ink);}
+  .source-link:focus-visible{outline:2px solid var(--accent-notch);outline-offset:2px;}
+  .tool-notch .source-link:hover{border-color:var(--accent-notch);}
+  .tool-cut .source-link:hover{border-color:var(--accent-cut);}
+
+  .panel{
+    background:var(--surface);border:1px solid var(--line);
+    border-radius:16px;padding:clamp(20px,4vw,32px);
+    margin:28px 0;
+  }
+
+  .feature-grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+    gap:1px;background:var(--line);
+    border:1px solid var(--line);border-radius:14px;overflow:hidden;
+    margin:28px 0;
+  }
+  .feature{background:var(--surface);padding:20px 22px;}
+  .feature h3{
+    font-size:14px;margin:0 0 8px;font-weight:600;
+    display:flex;align-items:center;gap:8px;
+  }
+  .feature h3 .mark{
+    width:6px;height:6px;border-radius:2px;flex:none;
+  }
+  .tool-notch .feature h3 .mark{background:var(--accent-notch);}
+  .tool-cut .feature h3 .mark{background:var(--accent-cut);}
+  .feature p{margin:0;color:var(--ink-dim);font-size:13.5px;line-height:1.65;}
+
+  .callout{
+    border-left:2px solid var(--accent-notch);
+    padding:4px 0 4px 18px;margin:28px 0;
+    color:var(--ink-dim);font-size:14px;
+  }
+  .tool-cut .callout{border-left-color:var(--accent-cut);}
+  .callout strong{color:var(--ink);font-weight:600;}
+
+  .terminal{
+    background:#0e1017;border:1px solid var(--line);
+    border-radius:12px;overflow:hidden;margin:28px 0;
+  }
+  .terminal .bar{
+    display:flex;gap:6px;padding:10px 14px;
+    background:var(--surface-2);border-bottom:1px solid var(--line);
+  }
+  .terminal .bar span{width:10px;height:10px;border-radius:50%;background:#33364a;}
+  .terminal pre{
+    margin:0;padding:16px 18px;font-family:var(--mono);
+    font-size:13px;line-height:1.8;color:#c9cbe0;overflow-x:auto;
+  }
+  .terminal .c{color:#6b7091;}
+
+  /* NotchShelf shelf-mock */
+  .shelf-mock{display:flex;flex-direction:column;gap:12px;}
+  .shelf-mock .lane-label{
+    font-family:var(--mono);font-size:11px;color:var(--ink-faint);
+    text-transform:uppercase;letter-spacing:.08em;
+  }
+  .shelf-items{display:flex;gap:10px;flex-wrap:wrap;}
+  .shelf-item{
+    display:flex;align-items:center;gap:8px;
+    padding:8px 12px 8px 10px;border-radius:10px;
+    background:var(--surface-2);border:1px solid var(--line);
+    font-family:var(--mono);font-size:12px;
+  }
+  .shelf-item .ftype{
+    width:20px;height:24px;border-radius:3px;flex:none;
+    display:grid;place-items:center;font-size:7px;color:#0b0d13;font-weight:700;
+  }
+  .shelf-item .x{color:var(--ink-faint);margin-left:2px;}
+
+  /* MacCut marquee mock */
+  .capture-mock{position:relative;}
+  .capture-frame{
+    position:relative;height:200px;border-radius:10px;
+    background:
+      radial-gradient(120px 90px at 30% 30%, #2a3550, transparent 60%),
+      radial-gradient(160px 120px at 75% 70%, #3a2733, transparent 60%),
+      var(--surface-2);
+    overflow:hidden;
+  }
+  .selection{position:absolute;top:34px;left:14%;right:14%;bottom:56px;}
+  .selection svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;}
+  .selection rect{
+    fill:none;stroke:var(--accent-cut);stroke-width:1.6;
+    stroke-dasharray:5 4;
+    animation:ants .5s linear infinite;
+  }
+  @keyframes ants{to{stroke-dashoffset:-18;}}
+  @media (prefers-reduced-motion:reduce){ .selection rect{animation:none;} }
+
+  .toolbar{
+    position:absolute;left:50%;bottom:14px;transform:translateX(-50%);
+    display:flex;align-items:center;gap:10px;
+    padding:8px 12px;border-radius:12px;
+    background:rgba(20,22,31,.92);border:1px solid var(--line);
+    box-shadow:0 8px 24px rgba(0,0,0,.35);
+  }
+  .toolbar .ticon{
+    width:22px;height:22px;border-radius:6px;display:grid;place-items:center;
+    font-size:12px;color:var(--ink-dim);background:var(--surface-2);
+  }
+  .toolbar .ticon.active{background:var(--accent-cut-dim);color:var(--accent-cut);}
+  .toolbar .sep{width:1px;height:18px;background:var(--line);}
+  .toolbar .swatches{display:flex;gap:5px;}
+  .toolbar .swatch{width:11px;height:11px;border-radius:50%;}
+
+  /* mosaic pixel-face demo */
+  .mosaic-demo{display:flex;align-items:center;gap:18px;margin-top:24px;flex-wrap:wrap;}
+  .pixel-face{
+    display:grid;grid-template-columns:repeat(6,10px);grid-template-rows:repeat(6,10px);
+    border-radius:6px;overflow:hidden;border:1px solid var(--line);
+  }
+  .pixel-face div{width:10px;height:10px;}
+  .mosaic-demo .caption{font-size:13px;color:var(--ink-dim);max-width:34ch;}
+  .mosaic-demo .caption b{color:var(--ink);font-weight:600;}
+
+  /* philosophy band */
+  .philosophy{
+    margin-top:clamp(80px,12vw,120px);
+    padding:36px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  }
+  .philosophy h2{
+    font-family:var(--mono);font-size:13px;color:var(--ink-faint);
+    text-transform:uppercase;letter-spacing:.1em;margin:0 0 24px;
+  }
+  .philosophy-grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:24px;
+  }
+  .philosophy-grid div h3{font-size:14.5px;margin:0 0 6px;font-weight:600;}
+  .philosophy-grid div p{margin:0;color:var(--ink-dim);font-size:13.5px;}
+
+  footer{
+    margin-top:48px;text-align:center;
+    color:var(--ink-faint);font-size:12.5px;font-family:var(--mono);
+  }
+  footer a{color:var(--ink-dim);text-decoration:underline;text-underline-offset:2px;}
+  footer a:hover{color:var(--ink);}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="menubar" aria-hidden="true">
+    <div class="menubar-left">
+      <b></b>
+      <span>NotchShelf</span>
+      <span>檔案</span>
+      <span>編輯</span>
+      <span>顯示</span>
+      <span>視窗</span>
+    </div>
+    <div class="menubar-right">
+      <span class="icon">📥</span>
+      <span class="icon">✂️</span>
+      <span class="icon">🔋</span>
+      <span class="icon">📶</span>
+      <span>週六 7月4日</span>
+    </div>
+  </div>
+
+  <header class="hero">
+    <p class="eyebrow">macOS 選單列工具 · 原生 Swift / AppKit</p>
+    <h1>兩個安靜待在選單列的小工具</h1>
+    <p class="lede">沒有視窗、不佔 Dock，開機常駐選單列，需要的時候才冒出來做事。分別解決兩個很日常的煩：檔案暫時沒地方放、截圖標註等到不耐煩。</p>
+
+    <div class="device" aria-hidden="true">
+      <div class="notch"></div>
+      <div class="drop-file"></div>
+      <div class="shelf-row">
+        <div class="chip"><span class="dot" style="background:#e8a53d"></span>report.pdf</div>
+        <div class="chip"><span class="dot" style="background:#5fb3e0"></span>screenshot.png</div>
+        <div class="chip"><span class="dot" style="background:#b28ce0"></span>assets.zip</div>
+      </div>
+    </div>
+
+    <nav class="nav-pills">
+      <a class="pill notch" href="#notchshelf">📥 前往 NotchShelf</a>
+      <a class="pill cut" href="#maccut">✂️ 前往 MacCut</a>
+    </nav>
+  </header>
+
+  <section id="notchshelf" class="tool tool-notch">
+    <div class="tool-head">
+      <div>
+        <p class="eyebrow">📥 NotchShelf</p>
+        <h2>瀏海下面，多一層暫存</h2>
+        <p class="lede">把檔案丟到 MacBook 瀏海下方，面板會展開接住；等要用的時候，再把它拖出來丟給 Finder 或任何 App。介於「桌面」跟「剪貼簿」之間的一個中繼站。</p>
+      </div>
+      <a class="source-link" href="https://github.com/junkfu/NotchShelf">原始碼 →</a>
+    </div>
+
+    <div class="panel shelf-mock">
+      <p class="lane-label">目前暫存 · Stash</p>
+      <div class="shelf-items">
+        <div class="shelf-item"><span class="ftype" style="background:#e8a53d">PDF</span>report.pdf<span class="x">×</span></div>
+        <div class="shelf-item"><span class="ftype" style="background:#5fb3e0">PNG</span>screenshot.png<span class="x">×</span></div>
+        <div class="shelf-item"><span class="ftype" style="background:#b28ce0">ZIP</span>assets.zip<span class="x">×</span></div>
+        <div class="shelf-item"><span class="ftype" style="background:#6fbf8a">KEY</span>slides.key<span class="x">×</span></div>
+      </div>
+    </div>
+
+    <div class="feature-grid">
+      <div class="feature"><h3><span class="mark"></span>拖入暫存</h3><p>檔案拖到瀏海下方，面板自動展開，放開就存進去。</p></div>
+      <div class="feature"><h3><span class="mark"></span>拖出取用</h3><p>滑鼠移到瀏海下方，面板展開，把項目拖到任何地方即可取出。</p></div>
+      <div class="feature"><h3><span class="mark"></span>拖出＝搬移（預設）</h3><p>確定目的端收到完整檔案後，才刪除暫存副本，大檔案也不會半途消失；可在選單切回「拖出＝複製」。</p></div>
+      <div class="feature"><h3><span class="mark"></span>暫存看得到</h3><p>檔案存放在 <code>~/Library/Application Support/NotchShelf/Stash</code>，選單可以直接打開資料夾。</p></div>
+    </div>
+
+    <p class="callout"><strong>拖入永遠是複製</strong> —— 原始檔案保留原地不動，暫存的只是一份副本，不用擔心誤刪來源。</p>
+
+    <div class="terminal">
+      <div class="bar"><span></span><span></span><span></span></div>
+      <pre><span class="c">$</span> cd NotchShelf
+<span class="c">$</span> ./build.sh
+<span class="c">$</span> open NotchShelf.app</pre>
+    </div>
+  </section>
+
+  <section id="maccut" class="tool tool-cut">
+    <div class="tool-head">
+      <div>
+        <p class="eyebrow">✂️ MacCut</p>
+        <h2>截圖標註，快到你不會等</h2>
+        <p class="lede">拿來取代常常卡頓的 LINE 內建截圖。框選這一步整個交給 macOS 系統原生處理，標註畫布只做最輕量的疊圖，畫的時候不會有延遲感。</p>
+      </div>
+      <a class="source-link" href="https://github.com/junkfu/mac-cut">原始碼 →</a>
+    </div>
+
+    <div class="panel capture-mock">
+      <div class="capture-frame" aria-hidden="true">
+        <div class="selection">
+          <svg viewBox="0 0 200 100" preserveAspectRatio="none">
+            <rect x="1" y="1" width="198" height="98" rx="2"></rect>
+          </svg>
+        </div>
+        <div class="toolbar">
+          <div class="ticon active">✎</div>
+          <div class="ticon">▭</div>
+          <div class="ticon">▦</div>
+          <div class="sep"></div>
+          <div class="swatches">
+            <span class="swatch" style="background:#ff5c5c"></span>
+            <span class="swatch" style="background:#ffd23f"></span>
+            <span class="swatch" style="background:#4fd67a"></span>
+            <span class="swatch" style="background:#4f9dff"></span>
+            <span class="swatch" style="background:#1a1a1a;border:1px solid #444"></span>
+          </div>
+          <div class="sep"></div>
+          <div class="ticon">↺</div>
+          <div class="ticon" style="color:#4fd67a">✓</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-grid">
+      <div class="feature"><h3><span class="mark"></span>全域快捷鍵</h3><p>預設 ⌘⇧X，可在偏好設定自訂；選單列圖示也能手動觸發截圖。</p></div>
+      <div class="feature"><h3><span class="mark"></span>三種標註工具</h3><p>畫筆、框框、馬賽克，5 色可選（馬賽克不受顏色影響）。</p></div>
+      <div class="feature"><h3><span class="mark"></span>三個快捷動作</h3><p>⌘Z 復原上一筆、⏎ 複製到剪貼簿並關閉、Esc 放棄這張截圖。</p></div>
+      <div class="feature"><h3><span class="mark"></span>不佔硬碟</h3><p>結果只進剪貼簿，貼到 LINE、Slack、任何地方都行，不會另外存檔。</p></div>
+    </div>
+
+    <div class="mosaic-demo">
+      <div class="pixel-face" aria-hidden="true">
+        <div style="background:#4a3527"></div><div style="background:#4a3527"></div><div style="background:#4a3527"></div><div style="background:#4a3527"></div><div style="background:#4a3527"></div><div style="background:#4a3527"></div>
+        <div style="background:#4a3527"></div><div style="background:#d8a879"></div><div style="background:#d8a879"></div><div style="background:#d8a879"></div><div style="background:#d8a879"></div><div style="background:#4a3527"></div>
+        <div style="background:#d8a879"></div><div style="background:#2b2118"></div><div style="background:#d8a879"></div><div style="background:#d8a879"></div><div style="background:#2b2118"></div><div style="background:#d8a879"></div>
+        <div style="background:#d8a879"></div><div style="background:#d8a879"></div><div style="background:#d8a879"></div><div style="background:#d8a879"></div><div style="background:#d8a879"></div><div style="background:#d8a879"></div>
+        <div style="background:#d8a879"></div><div style="background:#d8a879"></div><div style="background:#b5564a"></div><div style="background:#b5564a"></div><div style="background:#d8a879"></div><div style="background:#d8a879"></div>
+        <div style="background:#e2bb92"></div><div style="background:#e2bb92"></div><div style="background:#e2bb92"></div><div style="background:#e2bb92"></div><div style="background:#e2bb92"></div><div style="background:#e2bb92"></div>
+      </div>
+      <p class="caption"><b>馬賽克工具</b>：區塊像素化，適合遮個資或臉，顆粒大小可調。</p>
+    </div>
+
+    <p class="callout"><strong>框選交給系統</strong> —— 按下快捷鍵後直接呼叫 macOS 內建的 <code>screencapture -i</code>，GPU 原生合成；標註畫布用 layer-backed <code>NSView</code>，只疊「已完成的合成圖」+「正在畫的這一筆」，放開滑鼠才烘焙進去。</p>
+
+    <div class="terminal">
+      <div class="bar"><span></span><span></span><span></span></div>
+      <pre><span class="c">$</span> cd mac-cut
+<span class="c">$</span> ./setup-signing.sh   <span class="c">// 一次性，之後重編不用再重新授權</span>
+<span class="c">$</span> ./build.sh
+<span class="c">$</span> open MacCut.app</pre>
+    </div>
+  </section>
+
+  <section class="philosophy">
+    <h2>兩個工具共同的做法</h2>
+    <div class="philosophy-grid">
+      <div><h3>原生 Swift / AppKit</h3><p>不套跨平台框架，啟動快、記憶體佔用低。</p></div>
+      <div><h3>只住選單列</h3><p>沒有主視窗、不佔 Dock，用不到的時候完全不礙眼。</p></div>
+      <div><h3>個人工具，原始碼開放</h3><p>自己編、自己簽章，改幾行程式碼就能照自己習慣調整。</p></div>
+      <div><h3><code>./build.sh</code> 就能跑</h3><p>只需要 Xcode Command Line Tools，沒有其他相依套件。</p></div>
+    </div>
+  </section>
+
+  <footer>
+    <a href="https://github.com/junkfu/NotchShelf">NotchShelf</a> &amp; <a href="https://github.com/junkfu/mac-cut">MacCut</a> · 個人 macOS 工具，原生打造
+  </footer>
+
+</div>
+</body>
+</html>
