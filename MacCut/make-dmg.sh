@@ -4,7 +4,9 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 APP_NAME="MacCut"
-APP_BUNDLE="$APP_NAME.app"
+# build.sh 直接裝到 /Applications，這裡就從那邊取。
+INSTALL_DIR="${INSTALL_DIR:-/Applications}"
+APP_BUNDLE="$INSTALL_DIR/$APP_NAME.app"
 DMG_NAME="$APP_NAME.dmg"
 
 if [ ! -d "$APP_BUNDLE" ]; then
@@ -16,7 +18,7 @@ echo "▶︎ 準備 DMG 內容…"
 STAGING_DIR="$(mktemp -d)"
 trap 'rm -rf "$STAGING_DIR"' EXIT
 
-ditto "$APP_BUNDLE" "$STAGING_DIR/$APP_BUNDLE"
+ditto "$APP_BUNDLE" "$STAGING_DIR/$APP_NAME.app"
 ln -s /Applications "$STAGING_DIR/Applications"
 
 rm -f "$DMG_NAME"

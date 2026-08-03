@@ -30,10 +30,12 @@
 ```bash
 cd NotchShelf
 ./build.sh
-open NotchShelf.app
+open /Applications/NotchShelf.app
 ```
 
-`build.sh` 會：release 編譯 → 組裝 `NotchShelf.app`（含 App 圖示）→ ad-hoc 簽章。
+`build.sh` 會：release 編譯 → 組裝 `NotchShelf.app`（含 App 圖示）→ ad-hoc 簽章 → 直接安裝到 `/Applications`。
+
+repo 裡不會留第二份 `.app`——同一台機器上有兩份同名程式，Alfred、Spotlight、登入項目都會各看到兩個。想裝到別的地方就 `INSTALL_DIR=~/Applications ./build.sh`。
 
 App 圖示是程式畫出來的，沒有美術原始檔：`./make-icon.sh` 用 CoreGraphics 直接產生 `Resources/AppIcon.icns`。`.icns` 已經進版控，平常編譯不用跑，要改圖示才重跑。
 

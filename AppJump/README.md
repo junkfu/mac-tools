@@ -25,7 +25,7 @@
 cd AppJump
 ./setup-signing.sh   # 建議先執行一次，固定本機簽章
 ./build.sh
-open AppJump.app
+open /Applications/AppJump.app
 ```
 
 第一次設定「右 ⌘ + 字母」時，macOS 會要求「輔助使用」權限：
@@ -33,6 +33,8 @@ open AppJump.app
 > 系統設定 → 隱私權與安全性 → 輔助使用 → 開啟 AppJump
 
 授權後不必重開 AppJump，程式會自動偵測到並開始監聽。
+
+`build.sh` 會直接把 App 組裝到 `/Applications`，repo 裡不會留第二份 `.app`——同一台機器上有兩份同名程式，Alfred、Spotlight、登入項目都會各看到兩個。想裝到別的地方就 `INSTALL_DIR=~/Applications ./build.sh`。
 
 `setup-signing.sh` 會在登入鑰匙圈建立僅供本機使用的 `AppJump Local Signing` 自簽身分。macOS 的權限授權綁在程式碼簽章上，固定簽章後重新編譯就不必反覆重新授權；若用 ad-hoc 簽章，每次重編譯都會被系統當成另一份 App。
 

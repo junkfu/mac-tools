@@ -4,13 +4,17 @@ cd "$(dirname "$0")"
 
 APP_NAME="MacCut"
 BUILD_DIR=".build/release"
-APP_BUNDLE="$APP_NAME.app"
+
+# 直接組裝到 /Applications：整台機器只留一份 App。
+# 在 repo 裡另外留一份 .app 的話，Alfred、Spotlight、登入項目都會看到兩個同名程式。
+INSTALL_DIR="${INSTALL_DIR:-/Applications}"
+APP_BUNDLE="$INSTALL_DIR/$APP_NAME.app"
 
 echo "▶︎ 編譯中 (release)…"
 swift build -c release
 
-echo "▶︎ 組裝 .app bundle…"
-rm -rf "$APP_BUNDLE"
+echo "▶︎ 更新 ${APP_BUNDLE}…"
+# 就地覆蓋，不整包刪掉重建：bundle 路徑與簽章身分都不變，螢幕錄製授權才留得住。
 mkdir -p "$APP_BUNDLE/Contents/MacOS"
 mkdir -p "$APP_BUNDLE/Contents/Resources"
 cp "$BUILD_DIR/$APP_NAME" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
@@ -34,6 +38,5 @@ else
 fi
 
 echo ""
-echo "✅ 完成： $(pwd)/$APP_BUNDLE"
+echo "✅ 完成： $APP_BUNDLE"
 echo "   啟動： open \"$APP_BUNDLE\""
-echo "   或：  ./$APP_BUNDLE/Contents/MacOS/$APP_NAME"

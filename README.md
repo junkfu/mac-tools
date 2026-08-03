@@ -32,7 +32,7 @@ mac-tools/
 把檔案丟到 MacBook 瀏海下方暫存，需要時再拖出來。拖入是複製、拖出預設是搬移——但只有目的端確實收到完整檔案後，暫存副本才會被刪除，大檔案也不怕拖到一半就消失。
 
 ```bash
-cd NotchShelf && ./build.sh && open NotchShelf.app
+cd NotchShelf && ./build.sh && open /Applications/NotchShelf.app
 ```
 
 ### ✂️ [MacCut](MacCut/README.md)
@@ -40,7 +40,7 @@ cd NotchShelf && ./build.sh && open NotchShelf.app
 輕量截圖標註工具，取代卡頓的 LINE 內建截圖。框選直接交給系統原生的 `screencapture -i`，標註畫布只疊「已完成的合成圖」+「正在畫的這一筆」，畫的時候不會有延遲感。
 
 ```bash
-cd MacCut && ./setup-signing.sh && ./build.sh && open MacCut.app
+cd MacCut && ./setup-signing.sh && ./build.sh && open /Applications/MacCut.app
 ```
 
 ### ↔️ [AppJump](AppJump/README.md)
@@ -48,7 +48,7 @@ cd MacCut && ./setup-signing.sh && ./build.sh && open MacCut.app
 按住右 ⌘ 再按一個字母，直接跳到那個 App，沒開就順手開起來。右 ⌘ 在 macOS 沒有任何預設用途，當觸發鍵不會跟既有快捷鍵打架——代價是 Carbon 熱鍵分不出左右 ⌘，只有 CGEventTap 讀得到左右旗標，所以這條路要「輔助使用」權限；不想授權就改綁 `⌃⌥S` 這類傳統組合鍵，那條路完全不用權限。
 
 ```bash
-cd AppJump && ./setup-signing.sh && ./build.sh && open AppJump.app
+cd AppJump && ./setup-signing.sh && ./build.sh && open /Applications/AppJump.app
 ```
 
 ## 共同的設計原則

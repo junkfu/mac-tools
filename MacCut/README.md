@@ -25,10 +25,12 @@
 cd MacCut
 ./setup-signing.sh   # 一次性：建立本機簽章身分，見下方「固定簽章身分」說明
 ./build.sh
-open MacCut.app
+open /Applications/MacCut.app
 ```
 
-`build.sh` 會：release 編譯 → 組裝 `MacCut.app`（含 App 圖示）→ 簽章（有跑過 `setup-signing.sh` 就用固定身分，沒有就退回 ad-hoc）。
+`build.sh` 會：release 編譯 → 組裝 `MacCut.app`（含 App 圖示）→ 簽章（有跑過 `setup-signing.sh` 就用固定身分，沒有就退回 ad-hoc）→ 直接安裝到 `/Applications`。
+
+repo 裡不會留第二份 `.app`——同一台機器上有兩份同名程式，Alfred、Spotlight、登入項目都會各看到兩個。想裝到別的地方就 `INSTALL_DIR=~/Applications ./build.sh`。
 
 App 圖示是程式畫出來的，沒有美術原始檔：`./make-icon.sh` 用 CoreGraphics 直接產生 `Resources/AppIcon.icns`。`.icns` 已經進版控，平常編譯不用跑，要改圖示才重跑。
 
@@ -88,8 +90,8 @@ open /Applications/MacCut.app
 
 ### 開機自動啟動（選擇性）
 
-先照上面「打包成 DMG、安裝到 Applications」裝到 `/Applications/MacCut.app`，
-再到系統設定 →「一般」→「登入項目」→ 加入它。
+`build.sh` 已經把 App 裝在 `/Applications/MacCut.app`，
+到系統設定 →「一般」→「登入項目」→ 加入它即可。
 
 ## 使用方式
 
