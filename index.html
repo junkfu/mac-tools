@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>選單列裡的兩個小工具 — NotchShelf & MacCut</title>
-<meta name="description" content="NotchShelf 與 MacCut：兩個原生 Swift / AppKit 打造的 macOS 選單列小工具，分別解決檔案暫存與截圖標註。">
+<title>選單列裡的三個小工具 — NotchShelf & MacCut & AppJump</title>
+<meta name="description" content="NotchShelf、MacCut 與 AppJump：三個原生 Swift / AppKit 打造的 macOS 選單列小工具，分別解決檔案暫存、截圖標註與 App 快速切換。">
 <style>
   :root{
     --bg:#0b0d13;
@@ -19,6 +19,8 @@
     --accent-notch-dim:rgba(139,147,255,.16);
     --accent-cut:#ff6a5c;
     --accent-cut-dim:rgba(255,106,92,.16);
+    --accent-jump:#3fd6b0;
+    --accent-jump-dim:rgba(63,214,176,.16);
     --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
     --sans:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
   }
@@ -150,6 +152,7 @@
   .pill:focus-visible{outline:2px solid var(--accent-notch);outline-offset:2px;}
   .pill.cut:hover{border-color:var(--accent-cut);}
   .pill.notch:hover{border-color:var(--accent-notch);}
+  .pill.jump:hover{border-color:var(--accent-jump);}
 
   /* ---------- tool sections ---------- */
   .tool{margin-top:clamp(72px,12vw,120px);}
@@ -157,6 +160,7 @@
   .tool-head .eyebrow{margin-bottom:10px;}
   .tool-notch .eyebrow{color:var(--accent-notch);}
   .tool-cut .eyebrow{color:var(--accent-cut);}
+  .tool-jump .eyebrow{color:var(--accent-jump);}
   .tool h2{
     font-family:var(--mono);font-size:clamp(22px,3.4vw,30px);
     font-weight:600;margin:0 0 12px;letter-spacing:-.01em;
@@ -172,6 +176,7 @@
   .source-link:focus-visible{outline:2px solid var(--accent-notch);outline-offset:2px;}
   .tool-notch .source-link:hover{border-color:var(--accent-notch);}
   .tool-cut .source-link:hover{border-color:var(--accent-cut);}
+  .tool-jump .source-link:hover{border-color:var(--accent-jump);}
 
   .panel{
     background:var(--surface);border:1px solid var(--line);
@@ -195,6 +200,7 @@
   }
   .tool-notch .feature h3 .mark{background:var(--accent-notch);}
   .tool-cut .feature h3 .mark{background:var(--accent-cut);}
+  .tool-jump .feature h3 .mark{background:var(--accent-jump);}
   .feature p{margin:0;color:var(--ink-dim);font-size:13.5px;line-height:1.65;}
 
   .callout{
@@ -203,6 +209,7 @@
     color:var(--ink-dim);font-size:14px;
   }
   .tool-cut .callout{border-left-color:var(--accent-cut);}
+  .tool-jump .callout{border-left-color:var(--accent-jump);}
   .callout strong{color:var(--ink);font-weight:600;}
 
   .terminal{
@@ -285,6 +292,30 @@
   .mosaic-demo .caption{font-size:13px;color:var(--ink-dim);max-width:34ch;}
   .mosaic-demo .caption b{color:var(--ink);font-weight:600;}
 
+  /* AppJump HUD mock */
+  .jump-mock{display:flex;flex-direction:column;gap:14px;align-items:center;}
+  .jump-mock .lane-label{
+    font-family:var(--mono);font-size:11px;color:var(--ink-faint);
+    text-transform:uppercase;letter-spacing:.08em;align-self:flex-start;
+  }
+  .jump-hud{
+    display:flex;gap:8px;flex-wrap:wrap;justify-content:center;
+    padding:16px;border-radius:16px;
+    background:rgba(28,31,44,.92);border:1px solid var(--line);
+    box-shadow:0 12px 32px rgba(0,0,0,.4);
+  }
+  .jump-tile{display:flex;flex-direction:column;align-items:center;gap:6px;width:84px;}
+  .jump-tile .app-icon{
+    width:42px;height:42px;border-radius:10px;
+    display:grid;place-items:center;
+    font-family:var(--mono);font-size:16px;font-weight:700;color:#0b0d13;
+  }
+  .jump-tile .keycap{
+    font-family:var(--mono);font-size:11px;color:var(--ink);
+    padding:2px 7px;border-radius:5px;background:rgba(236,237,243,.13);
+  }
+  .jump-tile .app-name{font-size:11px;color:var(--ink-dim);}
+
   /* philosophy band */
   .philosophy{
     margin-top:clamp(80px,12vw,120px);
@@ -323,6 +354,7 @@
     <div class="menubar-right">
       <span class="icon">📥</span>
       <span class="icon">✂️</span>
+      <span class="icon">↔️</span>
       <span class="icon">🔋</span>
       <span class="icon">📶</span>
       <span>週六 7月4日</span>
@@ -331,8 +363,8 @@
 
   <header class="hero">
     <p class="eyebrow">macOS 選單列工具 · 原生 Swift / AppKit</p>
-    <h1>兩個安靜待在選單列的小工具</h1>
-    <p class="lede">沒有視窗、不佔 Dock，開機常駐選單列，需要的時候才冒出來做事。分別解決兩個很日常的煩：檔案暫時沒地方放、截圖標註等到不耐煩。</p>
+    <h1>三個安靜待在選單列的小工具</h1>
+    <p class="lede">沒有視窗、不佔 Dock，開機常駐選單列，需要的時候才冒出來做事。分別解決三個很日常的煩：檔案暫時沒地方放、截圖標註等到不耐煩、在一堆 App 之間切來切去。</p>
 
     <div class="device" aria-hidden="true">
       <div class="notch"></div>
@@ -347,6 +379,7 @@
     <nav class="nav-pills">
       <a class="pill notch" href="#notchshelf">📥 前往 NotchShelf</a>
       <a class="pill cut" href="#maccut">✂️ 前往 MacCut</a>
+      <a class="pill jump" href="#appjump">↔️ 前往 AppJump</a>
     </nav>
   </header>
 
@@ -453,8 +486,47 @@
     </div>
   </section>
 
+  <section id="appjump" class="tool tool-jump">
+    <div class="tool-head">
+      <div>
+        <p class="eyebrow">↔️ AppJump</p>
+        <h2>按住右 ⌘，一個字母就跳過去</h2>
+        <p class="lede">不用再 ⌘Tab 按半天數格子。按住右側 Command 再按 S 就直接跳到 Safari，沒開的話順手幫你開起來；已經在最前面時再按一次，可以隱藏它或在它自己的視窗之間輪替。</p>
+      </div>
+      <a class="source-link" href="https://github.com/junkfu/mac-tools/tree/main/AppJump">原始碼 →</a>
+    </div>
+
+    <div class="panel jump-mock">
+      <p class="lane-label">按住 右 ⌘ 不放 · 快捷提示板</p>
+      <div class="jump-hud" aria-hidden="true">
+        <div class="jump-tile"><span class="app-icon" style="background:#4f9dff">S</span><span class="keycap">右⌘S</span><span class="app-name">Safari</span></div>
+        <div class="jump-tile"><span class="app-icon" style="background:#6fbf8a">L</span><span class="keycap">右⌘L</span><span class="app-name">LINE</span></div>
+        <div class="jump-tile"><span class="app-icon" style="background:#e8a53d">T</span><span class="keycap">右⌘T</span><span class="app-name">Terminal</span></div>
+        <div class="jump-tile"><span class="app-icon" style="background:#b28ce0">C</span><span class="keycap">右⌘C</span><span class="app-name">Code</span></div>
+        <div class="jump-tile"><span class="app-icon" style="background:#ff8f6b">F</span><span class="keycap">右⌘F</span><span class="app-name">Finder</span></div>
+      </div>
+    </div>
+
+    <div class="feature-grid">
+      <div class="feature"><h3><span class="mark"></span>右 ⌘ ＋ 字母</h3><p>觸發鍵可改成左／右 ⌘、⌥ 或 ⌃。沒綁定的鍵一律原樣放行，右 ⌘ 不會變成廢鍵。</p></div>
+      <div class="feature"><h3><span class="mark"></span>也吃傳統組合鍵</h3><p>每個 App 可以另外綁 <code>⌃⌥S</code> 這類全域快捷鍵，走 Carbon 熱鍵，完全不需要任何權限。</p></div>
+      <div class="feature"><h3><span class="mark"></span>自動指派字母</h3><p>新增 App 時自動挑名稱裡還沒被佔用的字母（Safari → S），不滿意再自己改。</p></div>
+      <div class="feature"><h3><span class="mark"></span>再按一次</h3><p>目標已在最前面時可隱藏、循環它的視窗，或什麼都不做；可設全域預設，也能逐一覆寫。</p></div>
+    </div>
+
+    <p class="callout"><strong>為什麼是右 ⌘</strong> —— 它在 macOS 沒有任何預設用途，當觸發鍵不會跟既有快捷鍵打架。代價是 Carbon 熱鍵和 <code>NSEvent</code> 都分不出左右 ⌘，只有 <code>CGEventTap</code> 讀得到事件的 device-dependent 旗標，所以這條路需要「輔助使用」權限——不想授權就改用傳統組合鍵，一樣能跑。</p>
+
+    <div class="terminal">
+      <div class="bar"><span></span><span></span><span></span></div>
+      <pre><span class="c">$</span> cd AppJump
+<span class="c">$</span> ./setup-signing.sh   <span class="c">// 一次性，之後重編不用再重新授權</span>
+<span class="c">$</span> ./build.sh
+<span class="c">$</span> open AppJump.app</pre>
+    </div>
+  </section>
+
   <section class="philosophy">
-    <h2>兩個工具共同的做法</h2>
+    <h2>三個工具共同的做法</h2>
     <div class="philosophy-grid">
       <div><h3>原生 Swift / AppKit</h3><p>不套跨平台框架，啟動快、記憶體佔用低。</p></div>
       <div><h3>只住選單列</h3><p>沒有主視窗、不佔 Dock，用不到的時候完全不礙眼。</p></div>
@@ -464,7 +536,7 @@
   </section>
 
   <footer>
-    <a href="https://github.com/junkfu/NotchShelf">NotchShelf</a> &amp; <a href="https://github.com/junkfu/mac-cut">MacCut</a> · 個人 macOS 工具，原生打造
+    <a href="https://github.com/junkfu/NotchShelf">NotchShelf</a> &amp; <a href="https://github.com/junkfu/mac-cut">MacCut</a> &amp; <a href="https://github.com/junkfu/mac-tools/tree/main/AppJump">AppJump</a> · 個人 macOS 工具，原生打造
   </footer>
 
 </div>

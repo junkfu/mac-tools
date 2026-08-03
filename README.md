@@ -13,13 +13,17 @@ mac-tools/
 │   ├── Sources/NotchShelf/
 │   ├── build.sh
 │   └── README.md        完整功能、行為說明、開發筆記
-└── mac-cut/             截圖標註工具
-    ├── Sources/MacCut/
+├── MacCut/              截圖標註工具
+│   ├── Sources/MacCut/
+│   ├── build.sh
+│   └── README.md        完整功能、行為說明、開發筆記
+└── AppJump/             快捷鍵 App 切換工具
+    ├── Sources/AppJump/
     ├── build.sh
     └── README.md        完整功能、行為說明、開發筆記
 ```
 
-`NotchShelf/` 與 `mac-cut/` 原本是各自獨立的 repo，用 `git subtree` 併入這個 monorepo，兩邊過去的 commit 歷史都完整保留，可以直接用 `git log NotchShelf/` 或 `git log mac-cut/` 查。
+`NotchShelf/` 與 `MacCut/` 原本是各自獨立的 repo，用 `git subtree` 併入這個 monorepo，兩邊過去的 commit 歷史都完整保留，可以直接用 `git log NotchShelf/` 或 `git log MacCut/` 查。
 
 ## 工具
 
@@ -31,12 +35,20 @@ mac-tools/
 cd NotchShelf && ./build.sh && open NotchShelf.app
 ```
 
-### ✂️ [mac-cut](mac-cut/README.md)
+### ✂️ [MacCut](MacCut/README.md)
 
 輕量截圖標註工具，取代卡頓的 LINE 內建截圖。框選直接交給系統原生的 `screencapture -i`，標註畫布只疊「已完成的合成圖」+「正在畫的這一筆」，畫的時候不會有延遲感。
 
 ```bash
-cd mac-cut && ./setup-signing.sh && ./build.sh && open MacCut.app
+cd MacCut && ./setup-signing.sh && ./build.sh && open MacCut.app
+```
+
+### ↔️ [AppJump](AppJump/README.md)
+
+按住右 ⌘ 再按一個字母，直接跳到那個 App，沒開就順手開起來。右 ⌘ 在 macOS 沒有任何預設用途，當觸發鍵不會跟既有快捷鍵打架——代價是 Carbon 熱鍵分不出左右 ⌘，只有 CGEventTap 讀得到左右旗標，所以這條路要「輔助使用」權限；不想授權就改綁 `⌃⌥S` 這類傳統組合鍵，那條路完全不用權限。
+
+```bash
+cd AppJump && ./setup-signing.sh && ./build.sh && open AppJump.app
 ```
 
 ## 共同的設計原則
