@@ -15,6 +15,7 @@
 - **衝突提示**：一般全域快捷鍵被系統或其他 App 佔走時，設定表格與選單會標上 ⚠︎。
 - **登入時啟動**：走 macOS 原生的 `SMAppService`，不需要額外安裝 helper。
 - **本機設定檔**：所有綁定存在 `~/Library/Application Support/AppJump/config.json`，可讀、可備份、可進版控。
+- **程式畫出來的圖示**：`make-icon.sh` 用 CoreGraphics 直接畫出 `AppIcon.icns`，沒有美術原始檔要保管。
 
 ## 建置與啟動
 
@@ -58,6 +59,7 @@ open AppJump.app
 - `BindingStore.swift`／`Models.swift`：JSON 設定檔與資料模型。
 - `AppCatalog.swift`／`KeyCodeMap.swift`：App 名稱圖示查詢（含快取）、keyCode 與鍵名互轉。
 - `AXPermission.swift`／`LaunchAtLogin.swift`：輔助使用權限、登入項目。
+- `make-icon.sh`：產生 `Resources/AppIcon.icns`。`.icns` 已進版控，平常編譯不用跑；要改圖示才重跑。
 
 ## 開發筆記
 
@@ -65,6 +67,7 @@ open AppJump.app
 - **「右 ⌘ 是否按著」以事件自己帶的旗標為準**，不完全依賴累積狀態——鎖定畫面、切換使用者都可能吃掉某次 keyUp，純靠狀態會卡在「以為還按著」，之後每個字母都被吞掉。
 - **keyDown 被吞，keyUp 一定要跟著吞**，否則前景 App 會收到沒有配對的 keyUp。
 - `overlayDelay`（提示板延遲，預設 0.4 秒）目前只能改 `config.json`，設定視窗沒有開這個選項。
+- **畫圖示時不要用 `NSImage.lockFocus()`**。它會套用主螢幕的 backing scale，Retina 機器上每張圖都變成兩倍大；`iconutil` 接著按實際像素重新歸位，最後 `.icns` 裡會少掉 16 與 128 這兩階，而且完全不報錯。`make-icon.sh` 改成直接畫進指定像素數的 `NSBitmapImageRep`。
 
 ## 已知限制
 

@@ -16,6 +16,12 @@ mkdir -p "$APP_BUNDLE/Contents/Resources"
 cp "$BUILD_DIR/$APP_NAME" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 cp "Resources/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
 
+if [[ -f "Resources/AppIcon.icns" ]]; then
+    cp "Resources/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
+else
+    echo "   （沒有 Resources/AppIcon.icns，先跑 ./make-icon.sh 才會有 App 圖示）"
+fi
+
 SIGN_IDENTITY_NAME="AppJump Local Signing"
 
 if security find-certificate -c "$SIGN_IDENTITY_NAME" >/dev/null 2>&1; then
