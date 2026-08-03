@@ -7,11 +7,11 @@ cd "$(dirname "$0")"
 IDENTITY_NAME="MacCut Local Signing"
 
 if security find-certificate -c "$IDENTITY_NAME" >/dev/null 2>&1; then
-    echo "✅ 已經有「$IDENTITY_NAME」這把身分，不用重建。"
+    echo "✅ 已經有「${IDENTITY_NAME}」這把身分，不用重建。"
     exit 0
 fi
 
-echo "▶︎ 在登入鑰匙圈建立本機自簽的程式碼簽署憑證「$IDENTITY_NAME」…"
+echo "▶︎ 在登入鑰匙圈建立本機自簽的程式碼簽署憑證「${IDENTITY_NAME}」…"
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT

@@ -33,7 +33,11 @@ cd NotchShelf
 open NotchShelf.app
 ```
 
-`build.sh` 會：release 編譯 → 組裝 `NotchShelf.app` → ad-hoc 簽章。
+`build.sh` 會：release 編譯 → 組裝 `NotchShelf.app`（含 App 圖示）→ ad-hoc 簽章。
+
+App 圖示是程式畫出來的，沒有美術原始檔：`./make-icon.sh` 用 CoreGraphics 直接產生 `Resources/AppIcon.icns`。`.icns` 已經進版控，平常編譯不用跑，要改圖示才重跑。
+
+> 圖示的瀏海是「填深色」而不是「打穿成透明」。試過打穿，圖檔本身沒問題，但 macOS 26 會把輪廓不完整的 App 圖示自動墊到一塊系統預設的淺色底板上，64／128pt 就變成灰白框裡塞一顆縮小的圖示。外輪廓保持完整的超橢圓才不會觸發。
 
 啟動後沒有視窗也沒有 Dock 圖示，瀏海下方會出現一條深色小條（選單列也會有 📥 圖示）。
 

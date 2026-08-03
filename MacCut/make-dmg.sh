@@ -8,7 +8,7 @@ APP_BUNDLE="$APP_NAME.app"
 DMG_NAME="$APP_NAME.dmg"
 
 if [ ! -d "$APP_BUNDLE" ]; then
-    echo "▶︎ 找不到 $APP_BUNDLE，先跑 build.sh…"
+    echo "▶︎ 找不到 ${APP_BUNDLE}，先跑 build.sh…"
     ./build.sh
 fi
 
@@ -21,7 +21,7 @@ ln -s /Applications "$STAGING_DIR/Applications"
 
 rm -f "$DMG_NAME"
 
-echo "▶︎ 組裝 $DMG_NAME…"
+echo "▶︎ 組裝 ${DMG_NAME}…"
 hdiutil create -volname "$APP_NAME" -srcfolder "$STAGING_DIR" -ov -format UDZO "$DMG_NAME" >/dev/null
 
 echo ""

@@ -22,13 +22,15 @@
 需要 Xcode Command Line Tools（已內含 Swift 與 macOS SDK）。
 
 ```bash
-cd mac-cut
+cd MacCut
 ./setup-signing.sh   # 一次性：建立本機簽章身分，見下方「固定簽章身分」說明
 ./build.sh
 open MacCut.app
 ```
 
-`build.sh` 會：release 編譯 → 組裝 `MacCut.app` → 簽章（有跑過 `setup-signing.sh` 就用固定身分，沒有就退回 ad-hoc）。
+`build.sh` 會：release 編譯 → 組裝 `MacCut.app`（含 App 圖示）→ 簽章（有跑過 `setup-signing.sh` 就用固定身分，沒有就退回 ad-hoc）。
+
+App 圖示是程式畫出來的，沒有美術原始檔：`./make-icon.sh` 用 CoreGraphics 直接產生 `Resources/AppIcon.icns`。`.icns` 已經進版控，平常編譯不用跑，要改圖示才重跑。
 
 啟動後沒有視窗也沒有 Dock 圖示，選單列會出現 ✂️ 圖示。
 
