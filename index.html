@@ -55,6 +55,7 @@
   .menubar-left span{opacity:.7;}
   .menubar-right{display:flex;gap:14px;align-items:center;font-variant-numeric:tabular-nums;}
   .menubar-right .icon{font-size:13px;filter:grayscale(.15);}
+  .menubar-right img.icon{width:17px;height:17px;display:block;filter:none;}
   @media (max-width:560px){ .menubar-left span{display:none;} }
 
   /* ---------- hero ---------- */
@@ -84,13 +85,15 @@
     border-radius:20px;
     border:1px solid var(--line);
   }
-  .notch{
+  /* 一定要綁在 .device 底下：導覽膠囊也用 .notch 當修飾類別，
+     不收窄的話膠囊會吃到這裡的絕對定位而整顆消失。 */
+  .device .notch{
     position:absolute;top:0;left:50%;transform:translateX(-50%);
     width:132px;height:26px;
     background:var(--bg);
     border-radius:0 0 14px 14px;
   }
-  .notch::after{
+  .device .notch::after{
     content:"";position:absolute;inset:0;margin:auto;
     width:6px;height:6px;border-radius:50%;
     background:#1c2030;
@@ -143,11 +146,13 @@
 
   .nav-pills{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
   .pill{
+    display:inline-flex;align-items:center;gap:9px;
     font-family:var(--mono);font-size:13px;
-    padding:9px 18px;border-radius:999px;
+    padding:8px 18px 8px 12px;border-radius:999px;
     border:1px solid var(--line);color:var(--ink);
     text-decoration:none;transition:border-color .15s,background .15s;
   }
+  .pill img{width:24px;height:24px;flex:none;}
   .pill:hover{background:var(--surface);}
   .pill:focus-visible{outline:2px solid var(--accent-notch);outline-offset:2px;}
   .pill.cut:hover{border-color:var(--accent-cut);}
@@ -157,6 +162,9 @@
   /* ---------- tool sections ---------- */
   .tool{margin-top:clamp(72px,12vw,120px);}
   .tool-head{margin-bottom:32px;display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap;}
+  .tool-title{display:flex;gap:20px;align-items:flex-start;flex:1 1 320px;min-width:0;}
+  .tool-icon{width:78px;height:78px;flex:none;margin-top:-8px;}
+  @media (max-width:560px){ .tool-icon{width:60px;height:60px;margin-top:-4px;} }
   .tool-head .eyebrow{margin-bottom:10px;}
   .tool-notch .eyebrow{color:var(--accent-notch);}
   .tool-cut .eyebrow{color:var(--accent-cut);}
@@ -352,9 +360,9 @@
       <span>視窗</span>
     </div>
     <div class="menubar-right">
-      <span class="icon">📥</span>
-      <span class="icon">✂️</span>
-      <span class="icon">↔️</span>
+      <img class="icon" src="assets/icon-notchshelf.png" alt="" width="17" height="17">
+      <img class="icon" src="assets/icon-maccut.png" alt="" width="17" height="17">
+      <img class="icon" src="assets/icon-appjump.png" alt="" width="17" height="17">
       <span class="icon">🔋</span>
       <span class="icon">📶</span>
       <span>週六 7月4日</span>
@@ -377,18 +385,21 @@
     </div>
 
     <nav class="nav-pills">
-      <a class="pill notch" href="#notchshelf">📥 前往 NotchShelf</a>
-      <a class="pill cut" href="#maccut">✂️ 前往 MacCut</a>
-      <a class="pill jump" href="#appjump">↔️ 前往 AppJump</a>
+      <a class="pill notch" href="#notchshelf"><img src="assets/icon-notchshelf.png" alt="">前往 NotchShelf</a>
+      <a class="pill cut" href="#maccut"><img src="assets/icon-maccut.png" alt="">前往 MacCut</a>
+      <a class="pill jump" href="#appjump"><img src="assets/icon-appjump.png" alt="">前往 AppJump</a>
     </nav>
   </header>
 
   <section id="notchshelf" class="tool tool-notch">
     <div class="tool-head">
-      <div>
-        <p class="eyebrow">📥 NotchShelf</p>
+      <div class="tool-title">
+        <img class="tool-icon" src="assets/icon-notchshelf.png" alt="NotchShelf App 圖示" width="78" height="78">
+        <div>
+        <p class="eyebrow">NotchShelf</p>
         <h2>瀏海下面，多一層暫存</h2>
         <p class="lede">把檔案丟到 MacBook 瀏海下方，面板會展開接住；等要用的時候，再把它拖出來丟給 Finder 或任何 App。介於「桌面」跟「剪貼簿」之間的一個中繼站。</p>
+        </div>
       </div>
       <a class="source-link" href="https://github.com/junkfu/NotchShelf">原始碼 →</a>
     </div>
@@ -422,10 +433,13 @@
 
   <section id="maccut" class="tool tool-cut">
     <div class="tool-head">
-      <div>
-        <p class="eyebrow">✂️ MacCut</p>
+      <div class="tool-title">
+        <img class="tool-icon" src="assets/icon-maccut.png" alt="MacCut App 圖示" width="78" height="78">
+        <div>
+        <p class="eyebrow">MacCut</p>
         <h2>截圖標註，快到你不會等</h2>
         <p class="lede">拿來取代常常卡頓的 LINE 內建截圖。框選這一步整個交給 macOS 系統原生處理，標註畫布只做最輕量的疊圖，畫的時候不會有延遲感。</p>
+        </div>
       </div>
       <a class="source-link" href="https://github.com/junkfu/mac-cut">原始碼 →</a>
     </div>
@@ -479,7 +493,7 @@
 
     <div class="terminal">
       <div class="bar"><span></span><span></span><span></span></div>
-      <pre><span class="c">$</span> cd mac-cut
+      <pre><span class="c">$</span> cd MacCut
 <span class="c">$</span> ./setup-signing.sh   <span class="c">// 一次性，之後重編不用再重新授權</span>
 <span class="c">$</span> ./build.sh
 <span class="c">$</span> open MacCut.app</pre>
@@ -488,10 +502,13 @@
 
   <section id="appjump" class="tool tool-jump">
     <div class="tool-head">
-      <div>
-        <p class="eyebrow">↔️ AppJump</p>
+      <div class="tool-title">
+        <img class="tool-icon" src="assets/icon-appjump.png" alt="AppJump App 圖示" width="78" height="78">
+        <div>
+        <p class="eyebrow">AppJump</p>
         <h2>按住右 ⌘，一個字母就跳過去</h2>
         <p class="lede">不用再 ⌘Tab 按半天數格子。按住右側 Command 再按 S 就直接跳到 Safari，沒開的話順手幫你開起來；已經在最前面時再按一次，可以隱藏它或在它自己的視窗之間輪替。</p>
+        </div>
       </div>
       <a class="source-link" href="https://github.com/junkfu/mac-tools/tree/main/AppJump">原始碼 →</a>
     </div>
