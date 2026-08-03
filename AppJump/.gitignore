@@ -1,0 +1,12 @@
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+.scratch/
+
+# Built app bundle / installer image (produced by build.sh / make-dmg.sh)
+AppJump.app/
+AppJump.dmg
+
+# macOS
+.DS_Store
