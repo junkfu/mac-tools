@@ -11,6 +11,8 @@
 
 - **拖入暫存**：把檔案拖到瀏海下方，面板會展開，放開即暫存。
 - **拖出取用**：滑鼠移到瀏海下方面板會展開，把項目拖到 Finder 或任何 App 即可取出。
+- **多選**：在空白處按住拖曳可以框選（像 Finder 的橡皮筋），Shift＋框選會累加；也可以點一下項目選取（再點一下取消）、Shift＋點選連續範圍，或用標題列的「全選」／「移除所選」。拖曳任一已選取的項目會把整組一起拖出。點面板空白處可取消選取。
+- **拖到終端機**：cmux、Ghostty、iTerm2、Terminal 這類只認檔案路徑的 App 也收得到。
 - **暫存位置**：`~/Library/Application Support/NotchShelf/Stash`（選單可直接打開）。
 - **選單列**：展開／收合、打開暫存資料夾、搬移模式開關、清空、結束。
 
@@ -22,6 +24,11 @@
   即使是大型檔案也不會發生複製未完成就被刪除的問題；若目的端沒有接收（例如不支援的 App），暫存檔會保留。
   每個項目右上角有 **×** 可手動移除；丟到「垃圾桶」也會移除。
 - **改成複製**：若想拖出後仍保留暫存副本，到選單把「拖出後從暫存移除」關掉即可。
+- **拖到只認路徑的 App**：拖出時 pasteboard 同時帶著 file promise 和真實檔案路徑（`public.file-url`），promise 排在前面。
+  Finder、Mail 這類支援 promise 的 App 照舊走 promise；終端機、cmux、多數 Electron App 只讀路徑，拿到的是暫存資料夾裡那個檔案的路徑。
+  這種情況沒有任何複製發生，所以就算開著搬移模式，暫存檔也會保留（路徑才不會失效）。
+  若目的端拿到路徑後自己把檔案搬走（Finder 可能這麼做），暫存區會透過資料夾監看自動更新。
+  - cmux 0.64 的預設行為是把拖入的檔案開成預覽／分割面板；放開時按住 **Shift** 才會在終端機貼上路徑。
 
 ## 編譯與安裝
 
@@ -55,8 +62,9 @@ Sources/NotchShelf/
   AppDelegate.swift          選單列、生命週期
   ShelfStore.swift           暫存資料夾與檔案清單
   NotchWindowController.swift 浮動面板定位、展開／收合
-  ShelfRootView.swift        拖入目標、面板內容、hover 偵測
-  ShelfItemView.swift        單一項目（icon + 名稱 + ×），負責拖出
+  ShelfRootView.swift        拖入目標、面板內容、選取狀態、hover 偵測
+  ShelfItemView.swift        單一項目（icon + 名稱 + × + 選取勾勾），點選／偵測拖曳
+  ShelfDragCoordinator.swift 拖出：一次拖多檔、file promise ＋ 檔案路徑備援
 ```
 
 重新編譯：`./build.sh`

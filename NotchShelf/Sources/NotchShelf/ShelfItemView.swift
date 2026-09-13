@@ -1,5 +1,4 @@
 import AppKit
-import UniformTypeIdentifiers
 
 /// An NSButton that responds on the first click even when its window is not key.
 /// Needed because our panel is a non-activating panel that never becomes key.
@@ -7,31 +6,40 @@ final class FirstMouseButton: NSButton {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
 
-/// One stashed file: icon + name + remove button. Draggable out to Finder/apps.
+/// One stashed file: icon + name + remove button + selection badge.
 ///
-/// Drag-out uses NSFilePromiseProvider so that, in "move out" mode, the stash
-/// copy is only deleted *after* the destination has fully received the bytes —
-/// this avoids the data-loss race that a plain file-URL drag would have.
-final class ShelfItemView: NSView, NSDraggingSource, NSFilePromiseProviderDelegate {
-    private let url: URL
-    private weak var store: ShelfStore?
-    private weak var controller: NotchWindowController?
+/// A click toggles selection (Shift-click selects a range); dragging a selected
+/// chip drags the whole selection, dragging an unselected one drags just that
+/// file. The drag session itself and the file promises are owned by
+/// `ShelfDragCoordinator`, not by the chip — chips are rebuilt on every store
+/// change and must be free to disappear mid-drag.
+final class ShelfItemView: NSView {
+    let url: URL
+    private weak var shelf: ShelfRootView?
 
+    var isSelected = false {
+        didSet { if isSelected != oldValue { updateSelectionAppearance() } }
+    }
+
+    /// Selection backdrop. It is a separate subview on purpose: putting a
+    /// cornerRadius on *this* view's layer makes AppKit (macOS 14+) flip
+    /// `clipsToBounds` on, which clips the × and ✓ badges that deliberately hang
+    /// 3pt over the chip's corners into egg shapes.
+    private let highlightView = NSView()
     private let iconView = NSImageView()
     private let nameLabel = NSTextField(labelWithString: "")
     private let removeButton = FirstMouseButton()
+    private let checkBadge = NSImageView()
     private var mouseDownLocation: NSPoint?
 
-    private let promiseQueue: OperationQueue = {
-        let q = OperationQueue()
-        q.qualityOfService = .userInitiated
-        return q
-    }()
+    /// Where the drag image lifts off from, in this view's coordinates.
+    var dragImageFrame: NSRect {
+        NSRect(x: (bounds.width - 48) / 2, y: (bounds.height - 48) / 2, width: 48, height: 48)
+    }
 
-    init(url: URL, store: ShelfStore?, controller: NotchWindowController?) {
+    init(url: URL, shelf: ShelfRootView) {
         self.url = url
-        self.store = store
-        self.controller = controller
+        self.shelf = shelf
         super.init(frame: NSRect(x: 0, y: 0, width: 76, height: 64))
         wantsLayer = true
         translatesAutoresizingMaskIntoConstraints = false
@@ -44,6 +52,13 @@ final class ShelfItemView: NSView, NSDraggingSource, NSFilePromiseProviderDelega
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     private func setup() {
+        highlightView.wantsLayer = true
+        highlightView.layer?.cornerRadius = 10
+        highlightView.frame = bounds
+        highlightView.autoresizingMask = [.width, .height]
+        highlightView.isHidden = true
+        addSubview(highlightView)   // first, so it sits behind icon, label and badges
+
         let icon = NSWorkspace.shared.icon(forFile: url.path)
         icon.size = NSSize(width: 40, height: 40)
         iconView.image = icon
@@ -74,6 +89,15 @@ final class ShelfItemView: NSView, NSDraggingSource, NSFilePromiseProviderDelega
         removeButton.translatesAutoresizingMaskIntoConstraints = false
         addSubview(removeButton)
 
+        // White check on a blue disc (palette rendering), top-left, selected only.
+        let palette = NSImage.SymbolConfiguration(paletteColors: [.white, .systemBlue])
+        checkBadge.image = NSImage(systemSymbolName: "checkmark.circle.fill", accessibilityDescription: "已選取")?
+            .withSymbolConfiguration(palette)
+        checkBadge.imageScaling = .scaleProportionallyUpOrDown
+        checkBadge.isHidden = true
+        checkBadge.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(checkBadge)
+
         NSLayoutConstraint.activate([
             widthAnchor.constraint(equalToConstant: 76),
             heightAnchor.constraint(equalToConstant: 64),
@@ -91,17 +115,31 @@ final class ShelfItemView: NSView, NSDraggingSource, NSFilePromiseProviderDelega
             removeButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: 3),
             removeButton.widthAnchor.constraint(equalToConstant: 16),
             removeButton.heightAnchor.constraint(equalToConstant: 16),
+
+            checkBadge.topAnchor.constraint(equalTo: topAnchor, constant: -3),
+            checkBadge.leadingAnchor.constraint(equalTo: leadingAnchor, constant: -3),
+            checkBadge.widthAnchor.constraint(equalToConstant: 16),
+            checkBadge.heightAnchor.constraint(equalToConstant: 16),
         ])
 
-        toolTip = url.lastPathComponent
+        toolTip = "\(url.lastPathComponent)\n點一下選取，拖曳取出"
+    }
+
+    private func updateSelectionAppearance() {
+        highlightView.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.16).cgColor
+        highlightView.isHidden = !isSelected
+        checkBadge.isHidden = !isSelected
+        nameLabel.textColor = NSColor.white.withAlphaComponent(isSelected ? 1 : 0.85)
     }
 
     @objc private func removeTapped() {
-        store?.remove(url)
+        shelf?.store.remove(url)
     }
 
-    // MARK: - Drag OUT
+    // MARK: - Mouse: click = select, drag = drag out
 
+    // Not calling super here also keeps the press from reaching the root view,
+    // whose mouseDown clears the selection.
     override func mouseDown(with event: NSEvent) {
         mouseDownLocation = event.locationInWindow
     }
@@ -112,83 +150,12 @@ final class ShelfItemView: NSView, NSDraggingSource, NSFilePromiseProviderDelega
         let dy = event.locationInWindow.y - start.y
         guard (dx * dx + dy * dy) > 16 else { return }   // small threshold so clicks aren't drags
         mouseDownLocation = nil
-        beginDrag(with: event)
+        shelf?.beginDrag(from: self, event: event)
     }
 
-    private func beginDrag(with event: NSEvent) {
-        controller?.isDraggingOut = true
-
-        let typeID = (UTType(filenameExtension: url.pathExtension) ?? .data).identifier
-        let provider = NSFilePromiseProvider(fileType: typeID, delegate: self)
-
-        let item = NSDraggingItem(pasteboardWriter: provider)
-        let dragImage = NSWorkspace.shared.icon(forFile: url.path)
-        dragImage.size = NSSize(width: 48, height: 48)
-        let frame = NSRect(x: (bounds.width - 48) / 2, y: (bounds.height - 48) / 2, width: 48, height: 48)
-        item.setDraggingFrame(frame, contents: dragImage)
-
-        beginDraggingSession(with: [item], event: event, source: self)
-    }
-
-    func draggingSession(_ session: NSDraggingSession,
-                         sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
-        switch context {
-        case .withinApplication:
-            return []                     // don't let an item drop back onto our own shelf
-        case .outsideApplication:
-            // Allow move so the cursor reflects "move"; the actual source
-            // deletion (when in move mode) happens only after a verified write.
-            return [.copy, .move]
-        @unknown default:
-            return [.copy]
-        }
-    }
-
-    func draggingSession(_ session: NSDraggingSession,
-                         endedAt screenPoint: NSPoint,
-                         operation: NSDragOperation) {
-        controller?.isDraggingOut = false
-        // Re-evaluate collapse: the pointer is usually outside the panel now and
-        // no further mouseExited will fire, so without this the panel stays open.
-        controller?.rootView.scheduleCollapseAfterDragOut()
-
-        if operation == .delete {         // dropped on Trash
-            store?.remove(url)
-        }
-        // "Move out" deletion is NOT done here — it happens in the promise
-        // completion handler below, only after the bytes are safely delivered.
-    }
-
-    // MARK: - NSFilePromiseProviderDelegate
-
-    func filePromiseProvider(_ filePromiseProvider: NSFilePromiseProvider,
-                             fileNameForType fileType: String) -> String {
-        url.lastPathComponent
-    }
-
-    func filePromiseProvider(_ filePromiseProvider: NSFilePromiseProvider,
-                             writePromiseTo destURL: URL,
-                             completionHandler: @escaping (Error?) -> Void) {
-        let srcURL = url
-        let store = self.store
-        let fm = FileManager.default
-        do {
-            if fm.fileExists(atPath: destURL.path) {
-                try fm.removeItem(at: destURL)
-            }
-            try fm.copyItem(at: srcURL, to: destURL)
-            completionHandler(nil)
-            // Bytes delivered. Honor "move out" by removing the stash copy now —
-            // safe because the destination already has the full file.
-            if let store = store, store.removeAfterDrop {
-                DispatchQueue.main.async { store.remove(srcURL) }
-            }
-        } catch {
-            completionHandler(error)      // failed write: keep the stash copy
-        }
-    }
-
-    func operationQueue(for filePromiseProvider: NSFilePromiseProvider) -> OperationQueue {
-        promiseQueue
+    override func mouseUp(with event: NSEvent) {
+        guard mouseDownLocation != nil else { return }   // a drag already consumed this press
+        mouseDownLocation = nil
+        shelf?.chipClicked(self, modifiers: event.modifierFlags)
     }
 }

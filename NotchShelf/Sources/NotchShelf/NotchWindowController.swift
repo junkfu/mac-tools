@@ -39,7 +39,6 @@ final class NotchWindowController {
         panel.contentView = rootView
 
         rootView.controller = self
-        rootView.refresh()   // now that controller is wired, rebuild chips with it
     }
 
     func show() {

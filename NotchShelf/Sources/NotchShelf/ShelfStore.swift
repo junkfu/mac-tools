@@ -11,6 +11,9 @@ final class ShelfStore {
     private let defaults = UserDefaults.standard
     private let removeKey = "removeAfterDrop"
 
+    private var watcher: DispatchSourceFileSystemObject?
+    private var pendingReload: DispatchWorkItem?
+
     /// When true (default), dragging an item out and delivering it successfully
     /// removes it from the stash — i.e. drag-out is a "move". The delete only
     /// happens after the destination has fully received the bytes (see the
@@ -29,6 +32,8 @@ final class ShelfStore {
 
     func reload() {
         let fm = FileManager.default
+        // Recreate the folder if something removed it, so drops keep working.
+        try? fm.createDirectory(at: stashURL, withIntermediateDirectories: true)
         let urls = (try? fm.contentsOfDirectory(
             at: stashURL,
             includingPropertiesForKeys: [.contentModificationDateKey],
@@ -56,13 +61,57 @@ final class ShelfStore {
     }
 
     func remove(_ url: URL) {
-        try? FileManager.default.removeItem(at: url)
+        remove([url])
+    }
+
+    func remove(_ urls: [URL]) {
+        for u in urls { try? FileManager.default.removeItem(at: u) }
         reload()
     }
 
     func clear() {
         for u in items { try? FileManager.default.removeItem(at: u) }
         reload()
+    }
+
+    // MARK: - Folder watching
+
+    /// Reload when the stash folder changes behind our back: the user tidying it
+    /// in Finder (the menu opens it), or a drop destination that consumed the
+    /// plain file URL and moved the file out itself. Events are debounced since
+    /// a single copy produces several.
+    func startWatching() {
+        guard watcher == nil else { return }
+        let fd = open(stashURL.path, O_EVTONLY)
+        guard fd >= 0 else { return }
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: fd, eventMask: [.write, .delete, .rename], queue: .main)
+        source.setEventHandler { [weak self] in
+            guard let self else { return }
+            let flags = self.watcher?.data ?? []
+            if flags.contains(.delete) || flags.contains(.rename) {
+                // The folder itself went away; the fd now points at a dead inode.
+                self.stopWatching()
+                try? FileManager.default.createDirectory(at: self.stashURL, withIntermediateDirectories: true)
+                self.startWatching()
+            }
+            self.scheduleReload()
+        }
+        source.setCancelHandler { close(fd) }
+        source.resume()
+        watcher = source
+    }
+
+    private func stopWatching() {
+        watcher?.cancel()
+        watcher = nil
+    }
+
+    private func scheduleReload() {
+        pendingReload?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.reload() }
+        pendingReload = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: work)
     }
 
     /// Avoid clobbering an existing file: "report.pdf" -> "report 2.pdf" etc.

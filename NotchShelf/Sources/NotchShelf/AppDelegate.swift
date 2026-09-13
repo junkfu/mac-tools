@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         store.reload()
+        store.startWatching()
         controller = NotchWindowController(store: store)
         controller.show()
         setupStatusItem()
