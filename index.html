@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>選單列裡的三個小工具 — NotchShelf & MacCut & AppJump</title>
-<meta name="description" content="NotchShelf、MacCut 與 AppJump：三個原生 Swift / AppKit 打造的 macOS 選單列小工具，分別解決檔案暫存、截圖標註與 App 快速切換。">
+<title>選單列裡的四個小工具 — NotchShelf & MacCut & AppJump & KeyLegend</title>
+<meta name="description" content="NotchShelf、MacCut、AppJump 與 KeyLegend：四個原生 Swift / AppKit 打造的 macOS 選單列小工具，分別解決檔案暫存、截圖標註、App 快速切換與熱鍵速查。">
 <style>
   :root{
     --bg:#0b0d13;
@@ -21,6 +21,8 @@
     --accent-cut-dim:rgba(255,106,92,.16);
     --accent-jump:#3fd6b0;
     --accent-jump-dim:rgba(63,214,176,.16);
+    --accent-key:#f2c14e;
+    --accent-key-dim:rgba(242,193,78,.16);
     --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
     --sans:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
   }
@@ -158,6 +160,7 @@
   .pill.cut:hover{border-color:var(--accent-cut);}
   .pill.notch:hover{border-color:var(--accent-notch);}
   .pill.jump:hover{border-color:var(--accent-jump);}
+  .pill.key:hover{border-color:var(--accent-key);}
 
   /* ---------- tool sections ---------- */
   .tool{margin-top:clamp(72px,12vw,120px);}
@@ -169,6 +172,7 @@
   .tool-notch .eyebrow{color:var(--accent-notch);}
   .tool-cut .eyebrow{color:var(--accent-cut);}
   .tool-jump .eyebrow{color:var(--accent-jump);}
+  .tool-key .eyebrow{color:var(--accent-key);}
   .tool h2{
     font-family:var(--mono);font-size:clamp(22px,3.4vw,30px);
     font-weight:600;margin:0 0 12px;letter-spacing:-.01em;
@@ -185,6 +189,7 @@
   .tool-notch .source-link:hover{border-color:var(--accent-notch);}
   .tool-cut .source-link:hover{border-color:var(--accent-cut);}
   .tool-jump .source-link:hover{border-color:var(--accent-jump);}
+  .tool-key .source-link:hover{border-color:var(--accent-key);}
 
   .panel{
     background:var(--surface);border:1px solid var(--line);
@@ -209,6 +214,7 @@
   .tool-notch .feature h3 .mark{background:var(--accent-notch);}
   .tool-cut .feature h3 .mark{background:var(--accent-cut);}
   .tool-jump .feature h3 .mark{background:var(--accent-jump);}
+  .tool-key .feature h3 .mark{background:var(--accent-key);}
   .feature p{margin:0;color:var(--ink-dim);font-size:13.5px;line-height:1.65;}
 
   .callout{
@@ -218,6 +224,7 @@
   }
   .tool-cut .callout{border-left-color:var(--accent-cut);}
   .tool-jump .callout{border-left-color:var(--accent-jump);}
+  .tool-key .callout{border-left-color:var(--accent-key);}
   .callout strong{color:var(--ink);font-weight:600;}
 
   .terminal{
@@ -324,6 +331,76 @@
   }
   .jump-tile .app-name{font-size:11px;color:var(--ink-dim);}
 
+  /* KeyLegend overlay mock: the notes file on the left IS the panel on the right */
+  .legend-mock{display:flex;flex-direction:column;gap:14px;}
+  .legend-mock .lane-label{
+    font-family:var(--mono);font-size:11px;color:var(--ink-faint);
+    text-transform:uppercase;letter-spacing:.08em;
+  }
+  .legend-flow{
+    display:grid;grid-template-columns:minmax(170px,.8fr) auto minmax(250px,1.5fr);
+    gap:18px;align-items:center;
+  }
+  .legend-file{
+    margin:0;padding:14px 16px;border-radius:12px;
+    background:#0e1017;border:1px solid var(--line);
+    font-family:var(--mono);font-size:12px;line-height:1.75;color:#c9cbe0;overflow-x:auto;
+  }
+  .legend-file .h{color:var(--accent-key);}
+  .legend-file .k{color:var(--ink);}
+  .legend-arrow{
+    display:flex;flex-direction:column;align-items:center;gap:8px;
+    font-family:var(--mono);font-size:11px;color:var(--ink-faint);white-space:nowrap;
+  }
+  .legend-arrow .hold{
+    position:relative;display:grid;place-items:center;
+    width:40px;height:40px;border-radius:10px;
+    background:rgba(236,237,243,.1);border:1px solid var(--line);
+    font-size:17px;color:var(--ink);
+  }
+  .legend-arrow .hold::after{
+    content:"";position:absolute;inset:-4px;border-radius:13px;
+    border:2px solid var(--accent-key);opacity:0;
+    animation:holdRing 3s ease-in-out infinite;
+  }
+  .legend-hud{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;
+    padding:16px 18px;border-radius:16px;
+    background:rgba(28,31,44,.92);border:1px solid var(--line);
+    box-shadow:0 12px 32px rgba(0,0,0,.4);
+    animation:legendIn 3s ease-in-out infinite;
+  }
+  .legend-col h4{
+    margin:0 0 8px;font-family:var(--mono);font-size:11px;
+    letter-spacing:.08em;text-transform:uppercase;color:var(--accent-key);
+  }
+  .legend-row{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12.5px;color:var(--ink-dim);}
+  .legend-row .keycap{
+    flex:none;min-width:40px;text-align:center;
+    font-family:var(--mono);font-size:11px;color:var(--ink);
+    padding:2px 7px;border-radius:5px;background:rgba(236,237,243,.13);
+  }
+  /* 按住 → 環亮起 → 面板浮出 → 放開 → 一起淡出，循環 */
+  @keyframes holdRing{
+    0%{opacity:0;transform:scale(.92);}
+    18%{opacity:1;transform:scale(1);}
+    78%{opacity:1;}
+    90%,100%{opacity:0;transform:scale(1.04);}
+  }
+  @keyframes legendIn{
+    0%,22%{opacity:.25;transform:translateY(5px);}
+    36%,80%{opacity:1;transform:translateY(0);}
+    92%,100%{opacity:.25;transform:translateY(5px);}
+  }
+  @media (max-width:640px){
+    .legend-flow{grid-template-columns:1fr;}
+    .legend-arrow{flex-direction:row;justify-content:center;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .legend-hud{animation:none;}
+    .legend-arrow .hold::after{animation:none;opacity:.7;}
+  }
+
   /* philosophy band */
   .philosophy{
     margin-top:clamp(80px,12vw,120px);
@@ -363,6 +440,7 @@
       <img class="icon" src="assets/icon-notchshelf.png" alt="" width="17" height="17">
       <img class="icon" src="assets/icon-maccut.png" alt="" width="17" height="17">
       <img class="icon" src="assets/icon-appjump.png" alt="" width="17" height="17">
+      <img class="icon" src="assets/icon-keylegend.png" alt="" width="17" height="17">
       <span class="icon">🔋</span>
       <span class="icon">📶</span>
       <span>週六 7月4日</span>
@@ -371,8 +449,8 @@
 
   <header class="hero">
     <p class="eyebrow">macOS 選單列工具 · 原生 Swift / AppKit</p>
-    <h1>三個安靜待在選單列的小工具</h1>
-    <p class="lede">沒有視窗、不佔 Dock，開機常駐選單列，需要的時候才冒出來做事。分別解決三個很日常的煩：檔案暫時沒地方放、截圖標註等到不耐煩、在一堆 App 之間切來切去。</p>
+    <h1>四個安靜待在選單列的小工具</h1>
+    <p class="lede">沒有視窗、不佔 Dock，開機常駐選單列，需要的時候才冒出來做事。分別解決四個很日常的煩：檔案暫時沒地方放、截圖標註等到不耐煩、在一堆 App 之間切來切去、快捷鍵永遠記不住。</p>
 
     <div class="device" aria-hidden="true">
       <div class="notch"></div>
@@ -388,6 +466,7 @@
       <a class="pill notch" href="#notchshelf"><img src="assets/icon-notchshelf.png" alt="">前往 NotchShelf</a>
       <a class="pill cut" href="#maccut"><img src="assets/icon-maccut.png" alt="">前往 MacCut</a>
       <a class="pill jump" href="#appjump"><img src="assets/icon-appjump.png" alt="">前往 AppJump</a>
+      <a class="pill key" href="#keylegend"><img src="assets/icon-keylegend.png" alt="">前往 KeyLegend</a>
     </nav>
   </header>
 
@@ -542,8 +621,73 @@
     </div>
   </section>
 
+  <section id="keylegend" class="tool tool-key">
+    <div class="tool-head">
+      <div class="tool-title">
+        <img class="tool-icon" src="assets/icon-keylegend.png" alt="KeyLegend App 圖示" width="78" height="78">
+        <div>
+        <p class="eyebrow">KeyLegend</p>
+        <h2>長按 ⌥，你的熱鍵小抄浮出來</h2>
+        <p class="lede">快捷鍵記不住，翻筆記又得切視窗。單獨按住 Option 約 0.35 秒，一份自己手寫、分好類的熱鍵筆記就浮在畫面上，放開就消失。面板不搶焦點、不擋滑鼠，正在用的 App 照常操作。</p>
+        </div>
+      </div>
+      <a class="source-link" href="https://github.com/junkfu/mac-tools/tree/main/KeyLegend">原始碼 →</a>
+    </div>
+
+    <div class="panel legend-mock">
+      <p class="lane-label">hotkeys.md 就是面板本身 · 存檔即生效</p>
+      <div class="legend-flow" aria-hidden="true">
+        <pre class="legend-file"><span class="h">## VSCode</span>
+<span class="k">⌘P</span>: 快速開檔
+<span class="k">⌘⇧P</span>: 命令面板
+
+<span class="h">## 全域</span>
+<span class="k">⌘⇧4</span>: 截圖選取範圍
+<span class="k">右⌘S</span>: 跳到 Safari</pre>
+        <div class="legend-arrow"><span class="hold">⌥</span>單獨長按 0.35s</div>
+        <div class="legend-hud">
+          <div class="legend-col">
+            <h4>VSCode</h4>
+            <div class="legend-row"><span class="keycap">⌘P</span>快速開檔</div>
+            <div class="legend-row"><span class="keycap">⌘⇧P</span>命令面板</div>
+            <div class="legend-row"><span class="keycap">⌥↑</span>整行上移</div>
+          </div>
+          <div class="legend-col">
+            <h4>全域</h4>
+            <div class="legend-row"><span class="keycap">⌘⇧4</span>截圖選取範圍</div>
+            <div class="legend-row"><span class="keycap">右⌘S</span>跳到 Safari</div>
+            <div class="legend-row"><span class="keycap">⌃⌘Q</span>鎖定螢幕</div>
+          </div>
+          <div class="legend-col">
+            <h4>Claude Code</h4>
+            <div class="legend-row"><span class="keycap">⇧Tab</span>切換模式</div>
+            <div class="legend-row"><span class="keycap">Esc Esc</span>回到上一步</div>
+            <div class="legend-row"><span class="keycap">⌃R</span>搜尋歷史</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-grid">
+      <div class="feature"><h3><span class="mark"></span>長按才出現</h3><p>單獨按著 Option 才起算；夾雜其他鍵（⌥Tab、⌥點按）或加上其他修飾鍵一律當成正常操作，不會跳出來擋路。</p></div>
+      <div class="feature"><h3><span class="mark"></span>筆記就是一個文字檔</h3><p><code>## 分類</code> 開一類、<code>按鍵: 說明</code> 記一條，順序就是顯示順序。格式怪怪的行只會被略過，不會讓整份筆記讀不出來。</p></div>
+      <div class="feature"><h3><span class="mark"></span>存檔即生效</h3><p>監看筆記檔，用自己習慣的編輯器改完存檔就更新，不用重開 App；編輯器「寫暫存檔再換掉」的存法也照樣抓得到。</p></div>
+      <div class="feature"><h3><span class="mark"></span>不搶焦點、不擋滑鼠</h3><p>面板是 <code>nonactivatingPanel</code> 加 <code>ignoresMouseEvents</code>，長按期間前景 App 該怎麼用還是怎麼用。</p></div>
+    </div>
+
+    <p class="callout"><strong>只看不攔截</strong> —— 只用 <code>NSEvent</code> 全域監控看 Option 的狀態，從不吞任何按鍵。代價跟 AppJump 一樣：現行 macOS 上要在別的 App 是前景時收到鍵盤事件，一律需要「輔助使用」權限；沒授權時選單列照常可用，只是長按不會有反應。</p>
+
+    <div class="terminal">
+      <div class="bar"><span></span><span></span><span></span></div>
+      <pre><span class="c">$</span> cd KeyLegend
+<span class="c">$</span> ./setup-signing.sh   <span class="c">// 一次性，之後重編不用再重新授權</span>
+<span class="c">$</span> ./build.sh
+<span class="c">$</span> open /Applications/KeyLegend.app</pre>
+    </div>
+  </section>
+
   <section class="philosophy">
-    <h2>三個工具共同的做法</h2>
+    <h2>四個工具共同的做法</h2>
     <div class="philosophy-grid">
       <div><h3>原生 Swift / AppKit</h3><p>不套跨平台框架，啟動快、記憶體佔用低。</p></div>
       <div><h3>只住選單列</h3><p>沒有主視窗、不佔 Dock，用不到的時候完全不礙眼。</p></div>
@@ -553,7 +697,7 @@
   </section>
 
   <footer>
-    <a href="https://github.com/junkfu/NotchShelf">NotchShelf</a> &amp; <a href="https://github.com/junkfu/mac-cut">MacCut</a> &amp; <a href="https://github.com/junkfu/mac-tools/tree/main/AppJump">AppJump</a> · 個人 macOS 工具，原生打造
+    <a href="https://github.com/junkfu/NotchShelf">NotchShelf</a> &amp; <a href="https://github.com/junkfu/mac-cut">MacCut</a> &amp; <a href="https://github.com/junkfu/mac-tools/tree/main/AppJump">AppJump</a> &amp; <a href="https://github.com/junkfu/mac-tools/tree/main/KeyLegend">KeyLegend</a> · 個人 macOS 工具，原生打造
   </footer>
 
 </div>
