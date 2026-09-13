@@ -1,6 +1,8 @@
 # mac-tools
 
-一個人的 macOS 選單列工具箱。每個工具都是原生 Swift / AppKit 打造，開機常駐選單列、不佔 Dock，用不到的時候完全不礙眼。
+自己在開發、日常使用 Mac 的時候，總會碰到一些「要是能更順手一點就好了」的小地方：檔案想暫放一下再拖去別的地方、截圖想馬上畫兩筆、想一鍵跳到某個 App、忘了快捷鍵想瞄一眼。這個 repo 收的就是為了這些場景自己動手寫的工具，目的很單純：讓用 Mac 更有效率，而且照自己的習慣客製。
+
+每個工具都是原生 Swift / AppKit 打造，開機常駐選單列、不佔 Dock，用不到的時候完全不礙眼。原始碼開放，自己編、自己簽章，哪裡不順手就改幾行調成自己要的樣子。
 
 產品介紹頁（GitHub Pages）：**https://junkfu.github.io/mac-tools/**
 
@@ -17,8 +19,12 @@ mac-tools/
 │   ├── Sources/MacCut/
 │   ├── build.sh
 │   └── README.md        完整功能、行為說明、開發筆記
-└── AppJump/             快捷鍵 App 切換工具
-    ├── Sources/AppJump/
+├── AppJump/             快捷鍵 App 切換工具
+│   ├── Sources/AppJump/
+│   ├── build.sh
+│   └── README.md        完整功能、行為說明、開發筆記
+└── KeyLegend/           長按 Option 顯示熱鍵筆記
+    ├── Sources/KeyLegend/
     ├── build.sh
     └── README.md        完整功能、行為說明、開發筆記
 ```
@@ -29,7 +35,7 @@ mac-tools/
 
 ### 📥 [NotchShelf](NotchShelf/README.md)
 
-把檔案丟到 MacBook 瀏海下方暫存，需要時再拖出來。拖入是複製、拖出預設是搬移——但只有目的端確實收到完整檔案後，暫存副本才會被刪除，大檔案也不怕拖到一半就消失。
+把檔案丟到 MacBook 瀏海下方暫存，需要時再拖出來。拖入是複製、拖出預設是搬移——但只有目的端確實收到完整檔案後，暫存副本才會被刪除，大檔案也不怕拖到一半就消失。可以框選或點選多個一起拖，拖到 cmux、iTerm2 這類只認路徑的終端機也收得到。
 
 ```bash
 cd NotchShelf && ./build.sh && open /Applications/NotchShelf.app
@@ -51,12 +57,20 @@ cd MacCut && ./setup-signing.sh && ./build.sh && open /Applications/MacCut.app
 cd AppJump && ./setup-signing.sh && ./build.sh && open /Applications/AppJump.app
 ```
 
+### ⌨️ [KeyLegend](KeyLegend/README.md)
+
+單獨長按 Option 約 0.35 秒，浮出一份自己手寫、分好類的熱鍵筆記，放開就消失。筆記就是一個純文字檔（`## 分類` 開一類、`按鍵: 說明` 記一條），用慣用的編輯器改、存檔立刻生效；面板不搶焦點也不擋滑鼠，前景 App 照常操作。
+
+```bash
+cd KeyLegend && ./setup-signing.sh && ./build.sh && open /Applications/KeyLegend.app
+```
+
 ## 共同的設計原則
 
 - **原生 Swift / AppKit**：不套跨平台框架，啟動快、記憶體佔用低。
 - **只住選單列**：沒有主視窗、不佔 Dock。
 - **零額外相依**：只需要 Xcode Command Line Tools，`./build.sh` 就能編譯。
-- **個人工具，原始碼開放**：自己編、自己簽章，改幾行程式碼就能照習慣調整。
+- **個人工具，原始碼開放**：先解決自己的痛點，不追求功能齊全；自己編、自己簽章，改幾行程式碼就能照習慣調整。
 
 ## 更新產品介紹頁
 
