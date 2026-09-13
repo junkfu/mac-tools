@@ -37,7 +37,8 @@ final class ToolbarView: NSVisualEffectView {
         let penButton = makeToggleButton(symbol: "pencil.tip", tag: 0, tooltip: "畫筆")
         let rectButton = makeToggleButton(symbol: "rectangle", tag: 1, tooltip: "框框")
         let mosaicButton = makeToggleButton(symbol: "square.grid.3x3.fill", tag: 2, tooltip: "馬賽克")
-        toolButtons = [penButton, rectButton, mosaicButton]
+        let numberButton = makeToggleButton(symbol: "number.circle.fill", tag: 3, tooltip: "編號標記")
+        toolButtons = [penButton, rectButton, mosaicButton, numberButton]
         penButton.state = .on
 
         let colors: [NSColor] = [.systemRed, .systemYellow, .systemGreen, .systemBlue, .black]
@@ -61,7 +62,7 @@ final class ToolbarView: NSVisualEffectView {
         copyButton.keyEquivalent = "\r"
         copyButton.contentTintColor = .systemGreen
 
-        let toolGroup = NSStackView(views: [penButton, rectButton, mosaicButton])
+        let toolGroup = NSStackView(views: [penButton, rectButton, mosaicButton, numberButton])
         toolGroup.spacing = 4
         let colorGroup = NSStackView(views: colorButtons)
         colorGroup.spacing = 6
@@ -140,7 +141,8 @@ final class ToolbarView: NSVisualEffectView {
         switch sender.tag {
         case 0: tool = .pen
         case 1: tool = .rectangle
-        default: tool = .mosaic
+        case 2: tool = .mosaic
+        default: tool = .numberMarker
         }
         onSelectTool?(tool)
     }

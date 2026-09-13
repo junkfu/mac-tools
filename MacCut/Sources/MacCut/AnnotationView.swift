@@ -10,6 +10,7 @@ final class AnnotationView: NSView {
         case pen
         case rectangle
         case mosaic
+        case numberMarker
     }
 
     var tool: Tool = .pen
@@ -18,9 +19,12 @@ final class AnnotationView: NSView {
     }
 
     private(set) var baseImage: NSImage
-    private var undoStack: [NSImage] = []
+    /// 連同 undo 快照一起存編號計數，undo 才不會把「已烘焙的圖」跟「下一個該編幾號」搞不同步。
+    private var undoStack: [(image: NSImage, markerCount: Int)] = []
+    private var markerCount: Int = 0
     private let baseLineWidth: CGFloat = 4.0
     private let mosaicBlockSize: CGFloat = 14.0
+    private let markerDiameter: CGFloat = 28.0
     private let maxUndoDepth = 30
 
     private var currentPoints: [NSPoint] = []
@@ -88,6 +92,8 @@ final class AnnotationView: NSView {
             border.lineWidth = 1
             NSColor.white.withAlphaComponent(0.9).setStroke()
             border.stroke()
+        case .numberMarker:
+            break // 點一下就直接烘焙，沒有拖曳中的預覽狀態要畫。
         }
     }
 
@@ -99,6 +105,8 @@ final class AnnotationView: NSView {
         case .rectangle, .mosaic:
             dragStart = point
             dragCurrent = point
+        case .numberMarker:
+            placeNumberMarker(at: point)
         }
         needsDisplay = true
     }
@@ -110,6 +118,8 @@ final class AnnotationView: NSView {
             currentPoints.append(point)
         case .rectangle, .mosaic:
             dragCurrent = point
+        case .numberMarker:
+            break // 單點工具：mouseDown 當下就放好了，拖曳不做事。
         }
         needsDisplay = true
     }
@@ -157,10 +167,54 @@ final class AnnotationView: NSView {
             patch.draw(in: rect, from: .zero, operation: .copy, fraction: 1.0)
             composite.unlockFocus()
             baseImage = composite
+
+        case .numberMarker:
+            break // 已經在 mouseDown 裡烘焙完成。
         }
 
         clearPendingInput()
         needsDisplay = true
+    }
+
+    /// 點一下就放一個帶編號的圓形標記，編號從 1 開始遞增，畫布重開才會重置。
+    private func placeNumberMarker(at point: NSPoint) {
+        let scale = imageSpaceScale
+        pushUndoSnapshot()
+        markerCount += 1
+
+        let center = NSPoint(x: point.x * scale, y: point.y * scale)
+        let diameter = markerDiameter * scale
+        let composite = NSImage(size: baseImage.size)
+        composite.lockFocus()
+        baseImage.draw(at: .zero, from: .zero, operation: .copy, fraction: 1.0)
+        drawNumberMarker(markerCount, center: center, diameter: diameter)
+        composite.unlockFocus()
+        baseImage = composite
+    }
+
+    private func drawNumberMarker(_ number: Int, center: NSPoint, diameter: CGFloat) {
+        let rect = NSRect(x: center.x - diameter / 2, y: center.y - diameter / 2, width: diameter, height: diameter)
+        let circle = NSBezierPath(ovalIn: rect)
+        strokeColor.setFill()
+        circle.fill()
+        NSColor.white.withAlphaComponent(0.9).setStroke()
+        circle.lineWidth = max(1, diameter * 0.05)
+        circle.stroke()
+
+        let text = "\(number)"
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.alignment = .center
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.boldSystemFont(ofSize: diameter * 0.5),
+            .foregroundColor: NSColor.white,
+            .paragraphStyle: paragraphStyle
+        ]
+        let textSize = text.size(withAttributes: attributes)
+        let textRect = NSRect(
+            x: rect.midX - textSize.width / 2, y: rect.midY - textSize.height / 2,
+            width: textSize.width, height: textSize.height
+        )
+        text.draw(in: textRect, withAttributes: attributes)
     }
 
     private func clearPendingInput() {
@@ -184,7 +238,7 @@ final class AnnotationView: NSView {
         case .rectangle:
             guard let rect = dragRectInImageSpace(scale: scale) else { return nil }
             return NSBezierPath(rect: rect)
-        case .mosaic:
+        case .mosaic, .numberMarker:
             return nil
         }
     }
@@ -231,7 +285,7 @@ final class AnnotationView: NSView {
     }
 
     private func pushUndoSnapshot() {
-        undoStack.append(baseImage)
+        undoStack.append((baseImage, markerCount))
         if undoStack.count > maxUndoDepth {
             undoStack.removeFirst()
         }
@@ -239,7 +293,8 @@ final class AnnotationView: NSView {
 
     func undo() {
         guard let previous = undoStack.popLast() else { return }
-        baseImage = previous
+        baseImage = previous.image
+        markerCount = previous.markerCount
         needsDisplay = true
     }
 }
