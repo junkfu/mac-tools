@@ -23,10 +23,23 @@ final class HotkeyStore {
         reload()
     }
 
+    /// 筆記檔再大也不該超過這個數；超過就當成放錯檔，不要在拿到選單列圖示前把整份讀進記憶體。
+    private static let maxFileSize = 1 << 20   // 1 MB
+
     func reload() {
-        let text = (try? String(contentsOf: fileURL, encoding: .utf8)) ?? ""
-        groups = HotkeyFileParser.parse(text)
+        groups = HotkeyFileParser.parse(readNotes())
         onReload?()
+    }
+
+    private func readNotes() -> String {
+        let fm = FileManager.default
+        if let size = (try? fm.attributesOfItem(atPath: fileURL.path))?[.size] as? Int, size > Self.maxFileSize {
+            NSLog("%@", "[KeyLegend] 筆記檔超過 \(Self.maxFileSize) bytes，略過不讀：\(fileURL.path)")
+            return ""
+        }
+        guard let data = try? Data(contentsOf: fileURL) else { return "" }
+        // 有損解碼：夾一個壞 byte 只會變成 U+FFFD，不會讓整份筆記靜默變空。
+        return String(decoding: data, as: UTF8.self)
     }
 
     private func seedDefaultFileIfMissing() {

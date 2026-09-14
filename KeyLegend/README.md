@@ -64,7 +64,7 @@ open /Applications/KeyLegend.app
 
 ## 開發筆記
 
-- **只用 `NSEvent.addGlobalMonitorForEvents`，不架 CGEventTap**。KeyLegend 從頭到尾只是「看」Option 鍵的狀態，從不攔截或吞掉任何按鍵——這點跟 AppJump 的 `TriggerTap` 不一樣，AppJump 需要吞掉綁定的組合鍵才必須上 CGEventTap 那整套執行緒／run loop 機器；KeyLegend 沒有這個需求，用最輕量的全域監控就夠，換來的代價一樣（現行 macOS 上兩者都要輔助使用權限）。
+- **只用 `NSEvent.addGlobalMonitorForEvents`，不架 CGEventTap**。KeyLegend 訂閱的是 `.flagsChanged` 與 `.keyDown`——後者只用來在「按著 Option 又按了別的鍵」時取消長按判定，handler 不讀任何按鍵內容，也從不攔截或吞掉任何按鍵——這點跟 AppJump 的 `TriggerTap` 不一樣，AppJump 需要吞掉綁定的組合鍵才必須上 CGEventTap 那整套執行緒／run loop 機器；KeyLegend 沒有這個需求，用最輕量的全域監控就夠，換來的代價一樣（現行 macOS 上兩者都要輔助使用權限）。
 - **長按判定看 `modifierFlags.intersection(.deviceIndependentFlagsMask) == .option`**：必須「剛好只有 Option」才起算，任何其他修飾鍵加入或 Option 放開都會取消計時，這樣才不會在使用者按 ⌥Tab、⌘⌥ 之類的正常快捷鍵時誤跳出來。
 - **面板內容每次顯示都重新讀 `HotkeyStore` 現況並重建**，不做簽名比對／快取——純文字內容重繪很便宜，換來的好處是編輯筆記檔存檔後，下一次長按看到的保證是最新內容。
 - **筆記檔監看要處理 rename-safe 的存檔行為**：多數編輯器存檔其實是「寫暫存檔、再原地換掉舊檔」，原本的檔案描述符會撲空，收到 `.delete`/`.rename` 就要整組重建監看。

@@ -13,8 +13,10 @@ enum HotkeyFileParser {
         var groups: [HotkeyGroup] = []
         var current: HotkeyGroup?
 
-        for rawLine in text.split(separator: "\n", omittingEmptySubsequences: false) {
-            let line = String(rawLine).trimmingCharacters(in: .whitespaces)
+        // 用 isNewline 而不是 "\n"：Swift 把 "\r\n" 當成一個 Character，
+        // 用 "\n" 切的話 CRLF 存檔的筆記會整份變成一行、靜默消失。
+        for rawLine in text.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline) {
+            let line = String(rawLine).trimmingCharacters(in: .whitespacesAndNewlines)
             guard !line.isEmpty else { continue }
             guard !line.hasPrefix("<!--") else { continue }
 
