@@ -156,8 +156,10 @@ final class ShelfDragCoordinator: NSObject, NSDraggingSource, NSFilePromiseProvi
         let store = self.store
         let fm = FileManager.default
         do {
+            // destURL 是接收端決定的路徑。已存在就回報失敗、保留暫存副本，
+            // 絕不替接收端刪掉既有檔案（若那是個資料夾，會整棵不見）。
             if fm.fileExists(atPath: destURL.path) {
-                try fm.removeItem(at: destURL)
+                throw CocoaError(.fileWriteFileExists, userInfo: [NSFilePathErrorKey: destURL.path])
             }
             try fm.copyItem(at: srcURL, to: destURL)
             completionHandler(nil)

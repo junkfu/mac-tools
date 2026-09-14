@@ -13,6 +13,8 @@ final class ShelfStore {
 
     private var watcher: DispatchSourceFileSystemObject?
     private var pendingReload: DispatchWorkItem?
+    /// Serial so two drops never race on `uniqueDestination` names.
+    private let copyQueue = DispatchQueue(label: "NotchShelf.copy", qos: .userInitiated)
 
     /// When true (default), dragging an item out and delivering it successfully
     /// removes it from the stash — i.e. drag-out is a "move". The delete only
@@ -47,17 +49,37 @@ final class ShelfStore {
     }
 
     /// Copy the given files into the stash (originals are left in place).
+    ///
+    /// The copy runs off the main thread: a dropped folder can be arbitrarily
+    /// large (any app can put `file:///` on the pasteboard), and copying it
+    /// synchronously would freeze the panel. Sources that contain the stash
+    /// itself are skipped — copying them would recurse into the copy in progress.
     func add(_ urls: [URL]) {
-        let fm = FileManager.default
-        for src in urls {
-            let dest = uniqueDestination(for: src.lastPathComponent)
-            do {
-                try fm.copyItem(at: src, to: dest)
-            } catch {
-                NSLog("NotchShelf: copy failed for \(src.path): \(error.localizedDescription)")
-            }
+        let stashPath = stashURL.standardizedFileURL.path
+        let sources = urls.filter { src in
+            let path = src.standardizedFileURL.path
+            let containsStash = path == "/" || stashPath == path || stashPath.hasPrefix(path + "/")
+            if containsStash { NSLog("%@", "NotchShelf: refusing to stash \(path): it contains the stash folder") }
+            return !containsStash
         }
-        reload()
+        guard !sources.isEmpty else { return }
+        var reserved = Set<String>()
+        let destinations: [URL] = sources.map { src in
+            let dest = uniqueDestination(for: src.lastPathComponent, avoiding: reserved)
+            reserved.insert(dest.lastPathComponent)
+            return dest
+        }
+        copyQueue.async { [weak self] in
+            let fm = FileManager.default
+            for (src, dest) in zip(sources, destinations) {
+                do {
+                    try fm.copyItem(at: src, to: dest)
+                } catch {
+                    NSLog("%@", "NotchShelf: copy failed for \(src.path): \(error.localizedDescription)")
+                }
+            }
+            DispatchQueue.main.async { self?.reload() }
+        }
     }
 
     func remove(_ url: URL) {
@@ -69,8 +91,12 @@ final class ShelfStore {
         reload()
     }
 
+    /// Empties the folder, including dotfiles that `items` (which skips hidden
+    /// files) never shows — otherwise they would accumulate invisibly forever.
     func clear() {
-        for u in items { try? FileManager.default.removeItem(at: u) }
+        let fm = FileManager.default
+        let everything = (try? fm.contentsOfDirectory(at: stashURL, includingPropertiesForKeys: nil, options: [])) ?? []
+        for u in everything { try? fm.removeItem(at: u) }
         reload()
     }
 
@@ -115,11 +141,12 @@ final class ShelfStore {
     }
 
     /// Avoid clobbering an existing file: "report.pdf" -> "report 2.pdf" etc.
-    private func uniqueDestination(for name: String) -> URL {
+    private func uniqueDestination(for name: String, avoiding reserved: Set<String> = []) -> URL {
         let fm = FileManager.default
         let safeName = name.isEmpty ? "file" : name
         var dest = stashURL.appendingPathComponent(safeName)
-        guard fm.fileExists(atPath: dest.path) else { return dest }
+        let taken = { (url: URL) in fm.fileExists(atPath: url.path) || reserved.contains(url.lastPathComponent) }
+        guard taken(dest) else { return dest }
 
         let ext = (safeName as NSString).pathExtension
         let base = (safeName as NSString).deletingPathExtension
@@ -127,7 +154,7 @@ final class ShelfStore {
         while true {
             let candidate = ext.isEmpty ? "\(base) \(i)" : "\(base) \(i).\(ext)"
             dest = stashURL.appendingPathComponent(candidate)
-            if !fm.fileExists(atPath: dest.path) { return dest }
+            if !taken(dest) { return dest }
             i += 1
         }
     }
