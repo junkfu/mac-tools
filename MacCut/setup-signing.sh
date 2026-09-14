@@ -42,8 +42,11 @@ openssl pkcs12 -export \
 DEFAULT_KEYCHAIN="$(security default-keychain | awk -F'"' '{print $2}')"
 
 # -T /usr/bin/codesign：只授權 codesign 這支工具可以用這把私鑰，之後簽章不會再跳互動視窗要密碼。
+# 取捨要講清楚：-T 讓 codesign 免提示使用這把私鑰，代價是「任何以你身分執行的程式」也能拿它
+# 重簽任意二進位、繼承 TCC 授權。-x 讓私鑰不可匯出，build.sh 另外開 hardened runtime 擋掉 dyld 注入；
+# 若想再收緊，拿掉 -T 並在每次 build 的鑰匙圈對話框按「允許」（不要按「永遠允許」）。
 security import "$TMP_DIR/identity.p12" -k "$DEFAULT_KEYCHAIN" \
-    -P "$P12_PASSWORD" -T /usr/bin/codesign
+    -P "$P12_PASSWORD" -x -T /usr/bin/codesign
 
 echo ""
 echo "✅ 建立完成，之後 ./build.sh 會自動偵測到並改用這個身分簽章。"

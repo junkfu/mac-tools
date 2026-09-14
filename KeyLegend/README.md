@@ -31,6 +31,8 @@ open /Applications/KeyLegend.app
 
 `build.sh` 會直接把 App 組裝到 `/Applications`，repo 裡不會留第二份 `.app`。`setup-signing.sh` 會建立僅供本機使用的 `KeyLegend Local Signing` 自簽身分——macOS 的權限授權綁在程式碼簽章上，固定簽章後重新編譯就不必反覆重新授權。
 
+> 代價：這把私鑰對 `codesign` 免提示，表示任何以你身分執行的程式也能用它重簽二進位、繼承 KeyLegend 的「輔助使用」授權。`build.sh` 有開 hardened runtime 擋掉 dyld 注入，私鑰也設為不可匯出；若你的機器會跑不信任的程式，改成每次 build 手動按「允許」會更安全。
+
 ## 使用方式
 
 1. 點選單列的 ⌥ 圖示 →「編輯熱鍵筆記…」，用預設的文字編輯器打開筆記檔。

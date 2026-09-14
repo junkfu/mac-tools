@@ -27,7 +27,7 @@ else
 fi
 
 echo "▶︎ Ad-hoc 簽章…"
-codesign --force --sign - "$APP_BUNDLE" 2>/dev/null || true
+codesign --force --options runtime --sign - "$APP_BUNDLE" 2>/dev/null || true
 
 echo ""
 echo "✅ 完成： $APP_BUNDLE"
