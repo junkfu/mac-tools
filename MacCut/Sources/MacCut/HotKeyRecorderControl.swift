@@ -10,6 +10,7 @@ final class HotKeyRecorderControl: NSButton {
 
     private var isRecording = false
     private var monitor: Any?
+    private var windowObservers: [NSObjectProtocol] = []
     private var savedTitle: String = ""
 
     override init(frame frameRect: NSRect) {
@@ -35,9 +36,28 @@ final class HotKeyRecorderControl: NSButton {
         title = "請按下新的快捷鍵…"
 
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            self?.handle(event: event)
+            guard let self else { return event }
+            // 只吃自己視窗的按鍵。別的視窗（例如標註視窗的 ⌘Z）原樣放行，
+            // 否則會被悄悄錄成新的全域快捷鍵。
+            guard event.window === self.window else { return event }
+            self.handle(event: event)
             return nil // 吃掉這個按鍵事件，不要繼續往下傳
         }
+        // 錄製中把偏好設定關掉或切到別的視窗，就結束錄製；monitor 不能留著等下一個不相干的按鍵。
+        if let window {
+            let center = NotificationCenter.default
+            for name in [NSWindow.willCloseNotification, NSWindow.didResignKeyNotification] {
+                windowObservers.append(center.addObserver(forName: name, object: window, queue: .main) { [weak self] _ in
+                    self?.cancelRecording()
+                })
+            }
+        }
+    }
+
+    private func cancelRecording() {
+        guard isRecording else { return }
+        title = savedTitle
+        stopRecording()
     }
 
     private func handle(event: NSEvent) {
@@ -71,6 +91,8 @@ final class HotKeyRecorderControl: NSButton {
             NSEvent.removeMonitor(monitor)
         }
         monitor = nil
+        windowObservers.forEach { NotificationCenter.default.removeObserver($0) }
+        windowObservers.removeAll()
     }
 
     deinit {

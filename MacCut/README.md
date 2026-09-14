@@ -13,7 +13,7 @@
 ## 功能
 
 - **全域快捷鍵**：預設 `⌘⇧X`，可在選單列「偏好設定…」自訂（也可從選單列圖示手動觸發截圖）。
-- **標註工具**：畫筆（自由手繪）、框框（矩形外框）、馬賽克（區塊像素化，適合遮個資／臉），5 色可選（紅／黃／綠／藍／黑，馬賽克不受顏色影響）。
+- **標註工具**：畫筆（自由手繪）、框框（矩形外框）、馬賽克（區塊像素化。注意：像素化是可逆的模糊，遮帳號、密碼這類文字時請把 `mosaicBlockSize` 調大，小顆粒有機會被去像素化工具還原），5 色可選（紅／黃／綠／藍／黑，馬賽克不受顏色影響）。
 - **`⌘Z`** 復原上一筆、**`⏎`** 複製到剪貼簿並關閉、**`Esc`** 放棄這張截圖。
 - 結果只會進剪貼簿，貼到 LINE、Slack、任何地方都行，不會另外存檔。
 
@@ -120,7 +120,7 @@ Sources/MacCut/
   HotKeyStore.swift                快捷鍵持久化（UserDefaults）、Carbon 修飾鍵 <-> 顯示符號轉換
   HotKeyRecorderControl.swift      「偏好設定」裡的錄製按鈕：local monitor 抓下一個按鍵組合
   PreferencesWindowController.swift 偏好設定視窗
-  CaptureController.swift          呼叫 screencapture -i -s -c，用剪貼簿 changeCount 判斷是否取消
+  CaptureController.swift          呼叫 screencapture -i -s -t png 寫到 $TMPDIR 隨機檔名，讀完即刪；取消時沒有檔案
   AnnotationView.swift             標註畫布：合成圖 + 目前這一筆的即時預覽、undo 快照堆疊、馬賽克像素化
   ToolbarView.swift                浮動工具列：工具／顏色／undo／取消／複製
   AnnotationWindowController.swift 標註視窗的建立、定位（依截圖大小置中、超過螢幕自動縮小顯示）
