@@ -72,7 +72,7 @@ final class ClassicHotKeyManager {
                 registered[id] = (ref, binding.id)
             } else {
                 failed.append(binding)
-                NSLog("[AppJump] 註冊組合鍵 \(hotKey.displayString) 失敗（\(status)），可能已被其他 App 佔用")
+                NSLog("%@", "[AppJump] 註冊組合鍵 \(hotKey.displayString) 失敗（\(status)），可能已被其他 App 佔用")
             }
         }
         return failed

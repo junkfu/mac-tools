@@ -20,6 +20,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         wireEvents()
         apply(config: store.config)
 
+        if let loadError = store.loadError {
+            let alert = NSAlert()
+            alert.alertStyle = .warning
+            alert.messageText = "設定檔讀不懂，先用預設值啟動"
+            alert.informativeText = "\(store.fileURL.path)\n\n\(loadError)\n\n原檔沒有被動。修好再重開 AppJump 就會回來；若在修好前改了任何設定，原檔會先被改名成 config.json.broken-<時間> 備份。"
+            alert.runModal()
+        }
+
         if store.config.bindings.isEmpty {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
                 self?.showPreferences()

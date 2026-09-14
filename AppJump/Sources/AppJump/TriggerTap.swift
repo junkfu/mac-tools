@@ -107,6 +107,12 @@ final class TriggerTap {
             CFRunLoopStop(threadRunLoop)
         }
         thread?.cancel()
+        // 等 tap 執行緒真的退出再拆 tap、清狀態：callback 可能正跑到一半，
+        // 在主執行緒同時改 swallowedKeys / tap 會是資料競爭。run loop 一輪最多 1 秒。
+        let deadline = Date().addingTimeInterval(2)
+        while let thread, thread.isExecuting, Date() < deadline {
+            usleep(1_000)
+        }
         thread = nil
         threadRunLoop = nil
 

@@ -53,7 +53,11 @@ enum AppSwitcher {
         }
         guard let path = binding.appPath else { return nil }
         let url = URL(fileURLWithPath: path)
-        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+        // 路徑只是備援，仍然要是「同一個 App」：設定檔裡的路徑若被改成別的東西，
+        // 不該替它啟動任何一個剛好存在的檔案。
+        guard url.pathExtension == "app",
+              Bundle(url: url)?.bundleIdentifier == binding.bundleIdentifier else { return nil }
+        return url
     }
 
     private static func isFrontmost(_ app: NSRunningApplication) -> Bool {
@@ -65,14 +69,14 @@ enum AppSwitcher {
 
     private static func launch(binding: AppBinding) {
         guard let url = applicationURL(for: binding) else {
-            NSLog("[AppJump] 找不到 App：\(binding.bundleIdentifier)")
+            NSLog("%@", "[AppJump] 找不到 App：\(binding.bundleIdentifier)")
             return
         }
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = true
         NSWorkspace.shared.openApplication(at: url, configuration: configuration) { _, error in
             if let error {
-                NSLog("[AppJump] 啟動 \(binding.appName) 失敗：\(error.localizedDescription)")
+                NSLog("%@", "[AppJump] 啟動 \(binding.appName) 失敗：\(error.localizedDescription)")
             }
         }
     }
