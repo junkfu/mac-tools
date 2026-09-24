@@ -82,10 +82,31 @@ final class OverlayColumnsView: NSView {
         return columns.filter { !$0.isEmpty }
     }
 
+    /// 分類標題的強調色。原本標題、熱鍵、說明都用同一組白／灰，掃讀時很難一眼分出
+    /// 「這是分類」還是「這是熱鍵」，所以三層各給一種辨識方式：標題上色＋分隔線、
+    /// 熱鍵套鍵帽底色、說明維持次要灰。這裡刻意不用 controlAccentColor——強調色可以
+    /// 被使用者設成石墨灰，那就等於沒上色，白字問題照樣存在。
+    private static let headerColor = NSColor(name: nil) { appearance in
+        appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+            ? NSColor(srgbRed: 0.45, green: 0.80, blue: 1.00, alpha: 1)
+            : NSColor(srgbRed: 0.00, green: 0.32, blue: 0.60, alpha: 1)
+    }
+
     private static func makeGroupView(_ group: HotkeyGroup) -> NSView {
         let header = NSTextField(labelWithString: group.name)
-        header.font = .boldSystemFont(ofSize: 13)
-        header.textColor = .labelColor
+        header.font = .systemFont(ofSize: 13.5, weight: .heavy)
+        header.textColor = headerColor
+
+        // NSBox 的 separator 自己會跟著亮暗外觀換色，不必自己管 layer 顏色。
+        let rule = NSBox()
+        rule.boxType = .separator
+        rule.translatesAutoresizingMaskIntoConstraints = false
+        rule.widthAnchor.constraint(equalToConstant: columnWidth).isActive = true
+
+        let headerStack = NSStackView(views: [header, rule])
+        headerStack.orientation = .vertical
+        headerStack.alignment = .leading
+        headerStack.spacing = 5
 
         var entryViews = group.entries.prefix(maxEntriesPerGroup).map(makeEntryView)
         let hiddenCount = group.entries.count - entryViews.count
@@ -101,17 +122,15 @@ final class OverlayColumnsView: NSView {
         entriesStack.alignment = .leading
         entriesStack.spacing = 8
 
-        let stack = NSStackView(views: [header, entriesStack])
+        let stack = NSStackView(views: [headerStack, entriesStack])
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 6
+        stack.spacing = 8
         return stack
     }
 
     private static func makeEntryView(_ entry: HotkeyEntry) -> NSView {
-        let keysLabel = NSTextField(labelWithString: entry.keys)
-        keysLabel.font = .monospacedSystemFont(ofSize: 12, weight: .semibold)
-        keysLabel.textColor = .labelColor
+        let keyCap = KeyCapView(text: entry.keys)
 
         let descriptionLabel = NSTextField(wrappingLabelWithString: entry.description)
         descriptionLabel.font = .systemFont(ofSize: 11.5)
@@ -120,10 +139,52 @@ final class OverlayColumnsView: NSView {
         descriptionLabel.translatesAutoresizingMaskIntoConstraints = false
         descriptionLabel.widthAnchor.constraint(lessThanOrEqualToConstant: columnWidth).isActive = true
 
-        let stack = NSStackView(views: entry.description.isEmpty ? [keysLabel] : [keysLabel, descriptionLabel])
+        let stack = NSStackView(views: entry.description.isEmpty ? [keyCap] : [keyCap, descriptionLabel])
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 2
+        stack.spacing = 3
         return stack
+    }
+}
+
+/// 一顆鍵帽：熱鍵字串加上圓角底色與外框，讓它跟上面的分類標題、下面的說明文字
+/// 一眼就分得開。底色用 labelColor 疊透明度而不是寫死的白／黑，才能同時吃亮暗外觀；
+/// 但 CALayer 不會自動重算動態顏色，所以外觀變更時要自己再套一次。
+private final class KeyCapView: NSView {
+    init(text: String) {
+        super.init(frame: .zero)
+        wantsLayer = true
+        layer?.cornerRadius = 5
+        layer?.borderWidth = 1
+
+        let label = NSTextField(labelWithString: text)
+        label.font = .monospacedSystemFont(ofSize: 12, weight: .bold)
+        label.textColor = .labelColor
+        label.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(label)
+        NSLayoutConstraint.activate([
+            label.topAnchor.constraint(equalTo: topAnchor, constant: 2),
+            label.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -2),
+            label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 7),
+            label.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -7)
+        ])
+
+        applyLayerColors()
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        applyLayerColors()
+    }
+
+    private func applyLayerColors() {
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.14).cgColor
+            layer?.borderColor = NSColor.labelColor.withAlphaComponent(0.24).cgColor
+        }
     }
 }
